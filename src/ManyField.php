@@ -7,50 +7,80 @@ use SilverStripe\View\Requirements;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\CheckboxField;
 use SilverStripe\ORM\DataObjectInterface;
+use SilverStripe\Control\Director;
+use SilverStripe\Control\Controller;
+use SilverStripe\Forms\FormField;
+use SilverStripe\Control\HTTPResponse;
 
 class ManyField extends CompositeField
 {
-    protected $requiredFieldGroups = 0;
+    private static $allowed_actions = [
+        'createNewRecord'
+    ];
 
-    protected $maxFields = null;
+    /**
+     * @var int
+     */
+    protected $minRecords = 0;
 
+    /**
+     * @var int
+     */
+    protected $maxRecords = null;
+
+    /**
+     * @var boolean
+     */
     protected $canAdd = true;
 
+    /**
+     * @var boolean
+     */
     protected $canRemove = true;
 
+    /**
+     * @var boolean
+     */
+    protected $canSort = true;
+
+    /**
+     * @var string
+     */
     protected $template = 'ManyField';
 
+    /**
+     * @var string
+     */
     protected $addLabel = 'Add';
 
+    /**
+     * @var array
+     */
     protected $fieldCallbacks = [];
 
+    /**
+     * @param string $name
+     * @param array $children
+     */
     public function __construct($name, $children = null) {
-        Requirements::javascript('fullscreeninteractive/manyfield:client/js/ManyField.src.js');
-        Requirements::css('fullscreeninteractive/manyfield:client/css/ManyField.css');
+        Requirements::javascript('fullscreeninteractive/silverstripe-manyfield:client/js/ManyField.src.js');
+        Requirements::css('fullscreeninteractive/silverstripe-manyfield:client/css/ManyField.css');
 
         if ($children instanceof FieldList) {
             $this->children = $children;
-        } elseif (is_array($children)) {
-            $this->children = new FieldList($children);
-        } else {
-            //filter out null/empty items
-            $children = array_filter(func_get_args());
+        } else if (is_array($children)) {
             $this->children = new FieldList($children);
         }
 
         $this->children->setContainerField($this);
-        $this->setRequiredFieldGroups($requiredFieldGroups);
-        $this->setMaxFields($maxFields);
-
-        $this->addExtraClass(sprintf("%s_required", $this->getRequiredFieldGroups()));
-
         $this->brokenOnConstruct = false;
 
-        $this->setName($name);
+        FormField::__construct($name, null);
     }
 
     /**
-     * A callback which takes
+     * A callback to customise a given form field instance. Must take 3
+     * arguments `$field, $index, $manyField`.
      *
      * @param string $field
      * @param callable $callback
@@ -59,43 +89,109 @@ class ManyField extends CompositeField
         $this->fieldCallbacks[$field] = $callback;
     }
 
-    public function setRequiredFieldGroups($requiredFieldGroups) {
-        $this->requiredFieldGroups = $requiredFieldGroups;
+    /**
+     * @param int $minRecords
+     *
+     * @return $this
+     */
+    public function setMinRecords($minRecords) {
+        $this->minRecords = $minRecords;
+
+        return $this;
     }
 
-    public function getRequiredFieldGroups() {
-        return $this->requiredFieldGroups;
+    /**
+     * @return int
+     */
+    public function getMinRecords() {
+        return $this->minRecords;
     }
 
-    public function setMaxFields($maxFields) {
-        $this->maxFields = $maxFields;
+    /**
+     * @param int $maxRecords
+     *
+     * @return $this
+     */
+    public function setMaxRecords($maxRecords) {
+        $this->maxRecords = $maxRecords;
+
+        return $this;
     }
 
-    public function getMaxFields() {
+    /**
+     * @return int
+     */
+    public function getMaxRecords() {
         return $this->maxFields;
     }
 
+    /**
+     * @param boolean $bool
+     *
+     * @return $this
+     */
+    public function setCanSort($bool) {
+        $this->canSort = $bool;
+
+        return $this;
+    }
+
+    /**
+     * @param boolean $bool
+     *
+     * @return $this
+     */
     public function setCanRemove($bool) {
         $this->canRemove = $bool;
+
+        return $this;
     }
 
+    /**
+     * @param boolean $bool
+     *
+     * @return $this
+     */
     public function setCanAdd($bool) {
         $this->canAdd = $bool;
+
+        return $this;
     }
 
+    /**
+     * @return boolean
+     */
     public function canAdd() {
         return $this->canAdd;
     }
 
+    /**
+     * @return boolean
+     */
     public function canRemove() {
         return $this->canRemove;
     }
 
+    /**
+     * @return boolean
+     */
+    public function canSort() {
+        return $this->canSort;
+    }
+
+    /**
+     * @return string
+     */
     public function getAddLabel()
     {
         return $this->addLabel;
     }
 
+    /**
+     * @param string $label
+     *
+     * @return $this
+     */
     public function setAddLabel($label)
     {
         $this->addLabel = $label;
@@ -103,104 +199,112 @@ class ManyField extends CompositeField
         return $this;
     }
 
-    public function getAttributes() {
-        $attr = parent::getAttributes();
-        return $attr;
+    /**
+     * @return boolean
+     */
+    public function hasData()
+    {
+        return true;
     }
 
+    /**
+     * Set the field value.
+     *
+     * If a FormField requires specific behaviour for loading content from either the database
+     * or a submitted form value they should override setSubmittedValue() instead.
+     *
+     * @param mixed $value Either the parent object, or array of source data being loaded
+     * @param array|DataObject $data {@see Form::loadDataFrom}
+     * @return $this
+     */
+    public function setSubmittedValue($value, $data = null)
+    {
+        parent::setSubmittedValue($value, $data);
+    }
+
+    /**
+     * @param DataObjectInterface $record
+     */
     public function saveInto(DataObjectInterface $record)
     {
-        if ($this->name) {
+        if ($record->hasMethod('set'. $this->name)) {
+            $func = 'set'. $this->name;
+            $record->$func($this);
+        } else if ($record->hasField($this->name)) {
             $record->setCastedField($this->name, json_encode($this->dataValue()));
+        } else if ($record->getRelationType($this->name)) {
+            // @todo
         }
     }
 
+    /**
+     * Creates a new row template and returns it onto the page. As this is a new
+     * record we never will have to load anything into it.
+     *
+     * @return HTML;
+     */
+    public function createNewRecord()
+    {
+        $index = Controller::curr()->getRequest()->getVar('index');
+
+        $response = new HTTPResponse();
+        $response->setBody($this->generateRow($index++)->FieldHolder());
+
+        return $response;
+    }
+
+    /**
+     * Return the list of fields. We'll create a row for each of the values if
+     * they exist otherwise we'll only return
+     *
+     * @return FieldList
+     */
     public function FieldList() {
-        if ($this->maxFields) {
-            $fieldList = new FieldList();
-            $arrayOfFields = array();
+        $output = FieldList::create();
+        $index = 0;
 
-            for ($i = 0; $i < $this->maxFields; $i++) {
-                foreach ($this->children as $c) {
-                    if ($c instanceof CompositeField) {
-                        $cc2 = clone $c;
-                        $nC = new CompositeField();
-                        foreach ($cc2->children as $cc) {
-                            $cc3 = clone $cc;
-                            $cc3->name = $cc->name . '['. $i .']';
-                            $nC->push($cc3);
-                        }
-
-                        $arrayOfFields[$i][] = $nC;
-                    } else {
-                        $cc2 = clone $c;
-                        $cc2->name = $c->name . '['. $i .']';
-
-                        if(isset($this->fieldCallbacks[$c->name])) {
-                            $cc2 = call_user_func($this->fieldCallbacks[$c->name], $cc2, $i);
-                        }
-
-                        $arrayOfFields[$i][] = $cc2;
-                    }
-                }
+        if ($this->value) {
+            foreach ($this->value as $record) {
+                $output->push($this->generateRow($index++, $record));
             }
-
-            for ($i = 0; $i < sizeof($arrayOfFields); $i++) {
-                $comp = new CompositeField();
-                $comp->addExtraClass("row many_field");
-
-                if ($i > 0) {
-                    if (!$this->value || $i >= $this->value->count()) {
-                        $comp->addExtraClass('inactive');
-                    }
-                }
-
-                $field = null;
-
-                for ($j = 0; $j < sizeof($arrayOfFields[$i]); $j++) {
-                    if ($arrayOfFields[$i][$j] instanceof CompositeField) {
-                        foreach ($arrayOfFields[$i][$j]->children as $cc) {
-                            if ($this->value) {
-                                if ($record = $this->value->offsetGet($j)) {
-                                    $cc->setValue($record->{$cc->Name()});
-                                }
-                            }
-
-                            if(isset($this->fieldCallbacks[$cc->Name()])) {
-                                $cc = call_user_func($this->fieldCallbacks[$cc->Name()], $cc, $j);
-                            }
-
-                            if($cc) {
-                                $arrayOfFields[$i][$j]->push($cc);
-                            }
-                        }
-
-                        $field = $arrayOfFields[$i][$j];
-                    } else {
-                        $field = $arrayOfFields[$i][$j];
-
-                        if ($this->value) {
-                            if ($record = $this->value->offsetGet($i)) {
-                                $name = str_replace(array('[]'), '', $field->Name);
-
-                                if ($record->{$name}) {
-                                    $field->setValue($record->{$name});
-
-                                    if(isset($this->fieldCallbacks[$name])) {
-                                        call_user_func($this->fieldCallbacks[$name], false, $field, $record);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    $comp->push($field);
-                }
-                $fieldList->push($comp);
-            }
-
-            return $fieldList;
-        } else if(!$this->value) {
-            return $this->children;
         }
+
+        $output->push($this->generateRow($index++));
+
+        return $output;
+    }
+
+    /**
+     * Generates a unique row of form fields for this ManyField
+     *
+     * @param int $index
+     * @param mixed value
+     *
+     * @return CompositeField
+     */
+    public function generateRow($index, $value = null)
+    {
+        $row = CompositeField::create();
+        $row->addExtraClass("row manyfield__row");
+
+        foreach ($this->children as $child) {
+            $field = clone $child;
+            $field->name = $this->name . '['.$child->name . ']['. $index . ']';
+
+            if (isset($this->fieldCallbacks[$child->name])) {
+                call_user_func($this->fieldCallbacks[$name], $field, $index, $this);
+            }
+
+            $row->push($field);
+        }
+
+        $this->extend('alterRow', $row);
+
+        return $row;
+    }
+
+    public function AbsoluteLink($action = null)
+    {
+        return Director::absoluteURL($this->Link($action));
     }
 }
