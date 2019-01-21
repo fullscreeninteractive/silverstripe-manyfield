@@ -1,6 +1,6 @@
 # SilverStripe Many Field
 
-[![Version](http://img.shields.io/packagist/v/ullscreeninteractive/silverstripe-manyfield.svg)](https://packagist.org/packages/silverstripe/segment-field)
+[![Version](http://img.shields.io/packagist/v/ullscreeninteractive/silverstripe-manyfield.svg)](https://packagist.org/packages/fuilscreeninteractive/silverstripe-manyfield)
 [![License](http://img.shields.io/packagist/l/fullscreeninteractive/silverstripe-manyfield.svg)](license.md)
 
 A reusable approach to a form field which allows you to create and delete rows.
