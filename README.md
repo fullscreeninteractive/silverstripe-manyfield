@@ -1,12 +1,18 @@
 # SilverStripe Many Field
 
-[![Version](http://img.shields.io/packagist/v/ullscreeninteractive/silverstripe-manyfield.svg)](https://packagist.org/packages/fuilscreeninteractive/silverstripe-manyfield)
+[![Version](http://img.shields.io/packagist/v/fullscreeninteractive/silverstripe-manyfield.svg)](https://packagist.org/packages/fullscreeninteractive/silverstripe-manyfield)
 [![License](http://img.shields.io/packagist/l/fullscreeninteractive/silverstripe-manyfield.svg)](license.md)
 
 A reusable approach to a form field which allows you to create and delete rows.
 
 Each row can relate to a DataObject subclass or simply to be used to capture the
 data
+
+## Installation
+
+```
+composer require fullscreeninteractive/silverstripe-manyfield
+```
 
 ## Usage
 
