@@ -15,7 +15,7 @@
               $(row).prepend('<a class="btn btn-sm btn-danger manyfield__remove"><i class="fa fa-times"></i></a>');
             }
           } else {
-            field.find('.manyfield__remove').removeAll();
+            field.find('.manyfield__remove').remove();
           }
 
           if (canSort) {
@@ -23,7 +23,7 @@
               $(row).prepend('<span class="btn btn-sm btn-info manyfield__move"><i class="fa fa-sort"></i></span>')
             }
           } else {
-            field.find('.manyfield__move').removeAll()
+            field.find('.manyfield__move').remove()
           }
         })
       })

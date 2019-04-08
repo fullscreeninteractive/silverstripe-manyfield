@@ -59,6 +59,11 @@ class ManyField extends CompositeField
     protected $fieldCallbacks = [];
 
     /**
+     * 
+     */
+    protected $manyChildren = [];
+
+    /**
      * @param string $name
      * @param array $children
      */
@@ -67,12 +72,12 @@ class ManyField extends CompositeField
         Requirements::css('fullscreeninteractive/silverstripe-manyfield:client/css/ManyField.css');
 
         if ($children instanceof FieldList) {
-            $this->children = $children;
+            $this->manyChildren = $children;
         } else if (is_array($children)) {
-            $this->children = new FieldList($children);
+            $this->manyChildren = new FieldList($children);
         }
-
-        $this->children->setContainerField($this);
+        
+        $this->children = new FieldList();
         $this->brokenOnConstruct = false;
 
         FormField::__construct($name, null);
@@ -233,7 +238,7 @@ class ManyField extends CompositeField
         } else if ($record->hasField($this->name)) {
             $record->setCastedField($this->name, json_encode($this->dataValue()));
         } else if ($record->getRelationType($this->name)) {
-            // @todo
+            $this->updateRelation($record, true);
         }
     }
 
@@ -287,7 +292,7 @@ class ManyField extends CompositeField
         $row = CompositeField::create();
         $row->addExtraClass("row manyfield__row");
 
-        foreach ($this->children as $child) {
+        foreach ($this->manyChildren as $child) {
             $field = clone $child;
             $field->name = $this->name . '['.$child->name . ']['. $index . ']';
 
@@ -306,5 +311,78 @@ class ManyField extends CompositeField
     public function AbsoluteLink($action = null)
     {
         return Director::absoluteURL($this->Link($action));
+    }
+
+    /**
+     * Helper for going through all the values in this manymany field and 
+     * delete or create new records. This method won't be perfect for every case
+     * but it'll handle most cases as long as the Field name matches the 
+     * relation name.
+     */
+    public function updateRelation(DataObjectInterface $record, $delete = true) 
+    {
+        $existing = $record->{$this->name}();
+        $removed = [];
+
+        // if no value then we should clear everything out
+        if (!$this->value) {
+            if ($delete) {
+                foreach ($existing as $row) {
+                    $row->delete();
+                }
+            } else {
+                $existing->removeAll();
+            }
+
+            return $this;
+        }
+
+        foreach ($existing as $row) {
+            if (!isset($this->value['ID'])) {
+                throw new Exception('Missing ID field in ManyMany field list.');
+            }
+
+            if (!isset($this->value['ID'][$row->ID])) {
+                // missing so delete or remove.
+                if ($delete) {
+                    $existing->find('ID', $row->ID)->delete();
+                } else {
+                    $existing->removeById($row->ID);
+                }
+            }
+
+            foreach ($this->value['ID'] as $key => $id) {
+                if ($id) {
+                    $idKeyMap[$key] = $id;
+                }
+            }
+            
+            foreach ($this->value as $col => $values) {
+                if ($col == 'ID') {
+                    continue;
+                }
+
+                foreach ($values as $key => $value) {
+                    if (!isset($updatedData[$key])) {
+                        $updatedData[$key] = [];
+                    }
+
+                    $updatedData[$key][$col] = $value;
+                }
+            }
+
+            foreach ($updatedData as $key => $data) {
+                if (isset($idKeyMap[$key])) {
+                    $existing->find('ID', $idKeyMap[$key])->update($row);
+                } else {
+                    $create = Injector::inst()->create($existing->dataClass());
+                    $create->update($data);
+                    $create->write();
+                    $existing->add($create);
+                }
+            }
+        }
+
+        return $this;
     }
 }
