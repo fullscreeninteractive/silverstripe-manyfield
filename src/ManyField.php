@@ -10,6 +10,8 @@ use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Controller;
 use SilverStripe\Forms\FormField;
+use SilverStripe\Security\SecurityToken;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Control\HTTPResponse;
 
 class ManyField extends CompositeField
@@ -258,6 +260,14 @@ class ManyField extends CompositeField
         return $response;
     }
 
+    public function AddLink()
+    {
+        return Controller::join_links(
+            $this->AbsoluteLink('createNewRecord'),
+            '?SecurityID='. SecurityToken::inst()->getValue()
+        );
+    }
+
     /**
      * Return the list of fields. We'll create a row for each of the values if
      * they exist otherwise we'll only return
@@ -350,36 +360,42 @@ class ManyField extends CompositeField
                     $existing->removeById($row->ID);
                 }
             }
+        }
 
+        if (isset($this->value['ID'])) {
             foreach ($this->value['ID'] as $key => $id) {
                 if ($id) {
                     $idKeyMap[$key] = $id;
                 }
             }
-            
-            foreach ($this->value as $col => $values) {
-                if ($col == 'ID') {
-                    continue;
-                }
-
-                foreach ($values as $key => $value) {
-                    if (!isset($updatedData[$key])) {
-                        $updatedData[$key] = [];
-                    }
-
-                    $updatedData[$key][$col] = $value;
-                }
+        }
+        
+        foreach ($this->value as $col => $values) {
+            if ($col == 'ID') {
+                continue;
             }
 
-            foreach ($updatedData as $key => $data) {
-                if (isset($idKeyMap[$key])) {
-                    $existing->find('ID', $idKeyMap[$key])->update($row);
-                } else {
-                    $create = Injector::inst()->create($existing->dataClass());
-                    $create->update($data);
-                    $create->write();
-                    $existing->add($create);
+            foreach ($values as $key => $value) {
+                if (!isset($updatedData[$key])) {
+                    $updatedData[$key] = [];
                 }
+
+                $updatedData[$key][$col] = $value;
+            }
+        }
+
+        foreach ($updatedData as $key => $data) {
+            if (isset($idKeyMap[$key])) {
+                $record = $existing->find('ID', $idKeyMap[$key]);
+                
+                $record->update($data);
+                $record->write();
+            } else {
+                $create = Injector::inst()->create($existing->dataClass());
+                $create->update($data);
+
+                $create->write();
+                $existing->add($create);
             }
         }
 

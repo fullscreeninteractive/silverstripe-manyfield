@@ -17,7 +17,7 @@
 
 <% if canAdd %>
 <div class="manyfield__add">
-	<a class="btn btn-primary" href="$AbsoluteLink(createNewRecord)?SecurityID={$SecurityID}">$AddLabel +</a>
+	<a class="btn btn-primary" href="$AddLink">$AddLabel +</a>
 </div>
 <% end_if %>
 
