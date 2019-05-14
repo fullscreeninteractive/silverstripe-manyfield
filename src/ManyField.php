@@ -268,6 +268,17 @@ class ManyField extends CompositeField
         );
     }
 
+    public function setValue($value, $data = null)
+    {
+        if (!$value && $data) {
+            if ($data->hasMethod($this->name)) {
+                $value = $data->{$this->name}();
+            }
+        }
+
+        parent::setValue($value, $data);
+    }
+
     /**
      * Return the list of fields. We'll create a row for each of the values if
      * they exist otherwise we'll only return
@@ -277,8 +288,9 @@ class ManyField extends CompositeField
     public function FieldList() {
         $output = FieldList::create();
         $index = 0;
-
+        
         if ($this->value) {
+
             foreach ($this->value as $record) {
                 $output->push($this->generateRow($index++, $record));
             }
@@ -305,6 +317,7 @@ class ManyField extends CompositeField
         foreach ($this->manyChildren as $child) {
             $field = clone $child;
             $field->name = $this->name . '['.$child->name . ']['. $index . ']';
+            $field->setValue(($value) ? $value->{$child->name} : null);
 
             if (isset($this->fieldCallbacks[$child->name])) {
                 call_user_func($this->fieldCallbacks[$name], $field, $index, $this);
@@ -385,16 +398,28 @@ class ManyField extends CompositeField
         }
 
         foreach ($updatedData as $key => $data) {
+            // if all data is empty then skip adding this record.
+            $empty = array_filter($data);
+
+            if (empty($empty)) {
+                continue;
+            }
+
+            // if mapped to an existing record then find and update.
+            $record = null;
+
             if (isset($idKeyMap[$key])) {
                 $record = $existing->find('ID', $idKeyMap[$key]);
-                
+            }
+            
+            if ($record) {
                 $record->update($data);
                 $record->write();
             } else {
                 $create = Injector::inst()->create($existing->dataClass());
                 $create->update($data);
-
                 $create->write();
+
                 $existing->add($create);
             }
         }

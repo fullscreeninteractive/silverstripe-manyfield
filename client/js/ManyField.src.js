@@ -42,6 +42,10 @@
         parents.find('.manyfield__row').last().after(data)
 
         wrapManyFields()
+
+        $('body').trigger('manyFieldAdded', {
+          parents
+        })
       })
     })
 
@@ -49,6 +53,10 @@
       var parent = $(this).parents('.manyfield__row')
 
       parent.remove()
+
+      $('body').trigger('manyFieldRemoved', {
+        parent
+      })
     })
   })
 })(jQuery)
