@@ -294,9 +294,10 @@ class ManyField extends CompositeField
             foreach ($this->value as $record) {
                 $output->push($this->generateRow($index++, $record));
             }
+        } else {
+            // display one if none exist.
+            $output->push($this->generateRow($index++));
         }
-
-        $output->push($this->generateRow($index++));
 
         return $output;
     }
