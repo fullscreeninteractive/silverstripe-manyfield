@@ -10,6 +10,7 @@ use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Controller;
 use SilverStripe\Forms\FormField;
+use SilverStripe\Forms\HiddenField;
 use SilverStripe\Security\SecurityToken;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Control\HTTPResponse;
@@ -36,6 +37,9 @@ class ManyField extends CompositeField
     protected $canAdd = true;
 
     /**
+     * Can records be removed from the list - useful for displaying just an
+     * inline edit form.
+     * 
      * @var boolean
      */
     protected $canRemove = true;
@@ -54,6 +58,16 @@ class ManyField extends CompositeField
      * @var string
      */
     protected $addLabel = 'Add';
+
+    /**
+     * Does creating a new row automatically call write to the database?
+     * 
+     * If you use things such as UploadField which requires an ID then it is 
+     * best to set this to true
+     * 
+     * @var boolean
+     */
+    protected $callWriteOnNewRow = false;
 
     /**
      * @var array
@@ -80,20 +94,27 @@ class ManyField extends CompositeField
         }
         
         $this->children = new FieldList();
+
         $this->brokenOnConstruct = false;
 
         FormField::__construct($name, null);
     }
 
     /**
-     * A callback to customise a given form field instance. Must take 3
-     * arguments `$field, $index, $manyField`.
+     * A callback to customise a given form field instance. Must take 4
+     * arguments `$field, $index, $manyField, $value`.
      *
      * @param string $field
      * @param callable $callback
      */
     public function addFieldCallback($field, $callback) {
-        $this->fieldCallbacks[$field] = $callback;
+        if (!isset($this->fieldCallbacks[$field])) {
+            $this->fieldCallbacks[$field] = [];
+        }
+
+        $this->fieldCallbacks[$field][] = $callback;
+
+        return $this;
     }
 
     /**
@@ -215,6 +236,18 @@ class ManyField extends CompositeField
     }
 
     /**
+     * @param boolean $bool
+     * 
+     * @return $this
+     */
+    public function setCallWriteOnNewRow($bool)
+    {
+        $this->callWriteOnNewRow = $bool;
+
+        return $this;
+    }
+
+    /**
      * Set the field value.
      *
      * If a FormField requires specific behaviour for loading content from either the database
@@ -276,7 +309,7 @@ class ManyField extends CompositeField
             }
         }
 
-        parent::setValue($value, $data);
+        return parent::setValue($value, $data);
     }
 
     /**
@@ -290,7 +323,6 @@ class ManyField extends CompositeField
         $index = 0;
         
         if ($this->value) {
-
             foreach ($this->value as $record) {
                 $output->push($this->generateRow($index++, $record));
             }
@@ -315,13 +347,25 @@ class ManyField extends CompositeField
         $row = CompositeField::create();
         $row->addExtraClass("row manyfield__row");
 
+        if (!$value && $this->callWriteOnNewRow) {
+            // create a new value
+            $value = $this->createPhysicalRecord();
+        }
+
         foreach ($this->manyChildren as $child) {
             $field = clone $child;
             $field->name = $this->name . '['.$child->name . ']['. $index . ']';
-            $field->setValue(($value) ? $value->{$child->name} : null);
+            
+            if ($value && $value->hasMethod($child->Name)) {
+                $field->setValue($value->{$child->name}());
+            } else {
+                $field->setValue(($value) ? $value->{$child->name} : null);
+            }
 
             if (isset($this->fieldCallbacks[$child->name])) {
-                call_user_func($this->fieldCallbacks[$name], $field, $index, $this);
+                foreach ($this->fieldCallbacks[$child->name] as $cb) {
+                    call_user_func($cb, $field, $index, $this, $value);
+                }
             }
 
             $row->push($field);
@@ -330,6 +374,16 @@ class ManyField extends CompositeField
         $this->extend('alterRow', $row);
 
         return $row;
+    }
+
+    public function createPhysicalRecord()
+    {
+        $create = Injector::inst()->create($this->value->dataClass());
+        $create->write();
+        
+        $this->value->add($create);
+
+        return $create;
     }
 
     public function AbsoluteLink($action = null)
@@ -349,7 +403,7 @@ class ManyField extends CompositeField
         $removed = [];
 
         // if no value then we should clear everything out
-        if (!$this->value) {
+        if (!$this->value && $this->canRemove) {
             if ($delete) {
                 foreach ($existing as $row) {
                     $row->delete();
@@ -366,12 +420,14 @@ class ManyField extends CompositeField
                 throw new Exception('Missing ID field in ManyMany field list.');
             }
 
-            if (!isset($this->value['ID'][$row->ID])) {
-                // missing so delete or remove.
-                if ($delete) {
-                    $existing->find('ID', $row->ID)->delete();
-                } else {
-                    $existing->removeById($row->ID);
+            if ($this->canRemove) {
+                if (!isset($this->value['ID'][$row->ID])) {
+                    // missing so delete or remove.
+                    if ($delete) {
+                        $existing->find('ID', $row->ID)->delete();
+                    } else {
+                        $existing->removeById($row->ID);
+                    }
                 }
             }
         }

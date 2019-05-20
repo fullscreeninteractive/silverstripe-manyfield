@@ -39,7 +39,13 @@
         parents = $(this).parents('.manyfield__holder');
 
       $.get($(this).attr('href'), { index: parents.find('.manyfield__row').length }, function(data) {
-        parents.find('.manyfield__row').last().after(data)
+        var rows = parents.find('.manyfield__row').last()
+        
+        if (rows && rows.length) {
+          rows.after(data)
+        } else {
+          parents.find('.manyfield__outer').append(data)
+        }
 
         wrapManyFields()
 
