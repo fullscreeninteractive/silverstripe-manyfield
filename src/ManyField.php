@@ -470,14 +470,29 @@ class ManyField extends CompositeField
             }
             
             if ($record) {
-                $record->update($data);
+                foreach ($this->manyChildren as $childField) {
+                    if (isset($data[$childField->Name])) {
+                        $childField->setValue($data[$childField->Name]);
+                    }
+                    
+                    $childField->saveInto($record);
+                }
+
                 $record->write();
             } else {
-                $create = Injector::inst()->create($existing->dataClass());
-                $create->update($data);
-                $create->write();
+                $record = Injector::inst()->create($existing->dataClass());
+                
+                foreach ($this->manyChildren as $childField) {
+                    if (isset($data[$childField->Name])) {
+                        $childField->setValue($data[$childField->Name]);
+                    }
 
-                $existing->add($create);
+                    $childField->saveInto($record);
+                }
+
+                $record->write();
+
+                $existing->add($record);
             }
         }
 
