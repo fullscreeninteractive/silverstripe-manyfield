@@ -14,11 +14,16 @@ use SilverStripe\Forms\HiddenField;
 use SilverStripe\Security\SecurityToken;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Control\HTTPResponse;
+use Exception;
 
 class ManyField extends CompositeField
 {
     private static $allowed_actions = [
-        'createNewRecord'
+        'createNewRecord',
+        'recordForm',
+        'saveRecord',
+        'deleteRecord',
+        'updatedRecords'
     ];
 
     /**
@@ -39,7 +44,7 @@ class ManyField extends CompositeField
     /**
      * Can records be removed from the list - useful for displaying just an
      * inline edit form.
-     * 
+     *
      * @var boolean
      */
     protected $canRemove = true;
@@ -48,6 +53,11 @@ class ManyField extends CompositeField
      * @var boolean
      */
     protected $canSort = true;
+
+    /**
+     * @var boolean
+     */
+    protected $inlineSave = false;
 
     /**
      * @var string
@@ -60,11 +70,16 @@ class ManyField extends CompositeField
     protected $addLabel = 'Add';
 
     /**
+     * @var string
+     */
+    protected $ajaxUrl = false;
+
+    /**
      * Does creating a new row automatically call write to the database?
-     * 
-     * If you use things such as UploadField which requires an ID then it is 
+     *
+     * If you use things such as UploadField which requires an ID then it is
      * best to set this to true
-     * 
+     *
      * @var boolean
      */
     protected $callWriteOnNewRow = false;
@@ -75,7 +90,7 @@ class ManyField extends CompositeField
     protected $fieldCallbacks = [];
 
     /**
-     * 
+     *
      */
     protected $manyChildren = [];
 
@@ -92,7 +107,7 @@ class ManyField extends CompositeField
         } else if (is_array($children)) {
             $this->manyChildren = new FieldList($children);
         }
-        
+
         $this->children = new FieldList();
 
         $this->brokenOnConstruct = false;
@@ -151,6 +166,24 @@ class ManyField extends CompositeField
      */
     public function getMaxRecords() {
         return $this->maxFields;
+    }
+
+    /**
+     * @param boolean $inlineSave
+     *
+     * @return $this
+     */
+    public function setInlineSave($inlineSave) {
+        $this->inlineSave = $inlineSave;
+
+        return $this;
+    }
+
+    /**
+     * @return int
+     */
+    public function getInlineSave() {
+        return $this->inlineSave;
     }
 
     /**
@@ -237,7 +270,7 @@ class ManyField extends CompositeField
 
     /**
      * @param boolean $bool
-     * 
+     *
      * @return $this
      */
     public function setCallWriteOnNewRow($bool)
@@ -245,6 +278,26 @@ class ManyField extends CompositeField
         $this->callWriteOnNewRow = $bool;
 
         return $this;
+    }
+
+    /**
+     * @param boolean $bool
+     *
+     * @return $this
+     */
+    public function setLoadFromAjax($url)
+    {
+        $this->ajaxUrl = $url;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    public function getLoadFromAjax()
+    {
+        return $this->ajaxUrl;
     }
 
     /**
@@ -285,7 +338,13 @@ class ManyField extends CompositeField
      */
     public function createNewRecord()
     {
-        $index = Controller::curr()->getRequest()->getVar('index');
+        $request = Controller::curr()->getRequest();
+
+        if (!SecurityToken::inst()->checkRequest($request)) {
+            return Controller::curr()->httpError(400);
+        }
+
+        $index = $request->getVar('index');
 
         $response = new HTTPResponse();
         $response->setBody($this->generateRow($index++)->FieldHolder());
@@ -293,6 +352,113 @@ class ManyField extends CompositeField
         return $response;
     }
 
+    /**
+     * Saves an individual line item
+     * @return HTML;
+     */
+    public function saveRecord()
+    {
+        $request = Controller::curr()->getRequest();
+
+        if (!SecurityToken::inst()->checkRequest($request)) {
+            return Controller::curr()->httpError(400);
+        }
+
+        $index = Controller::curr()->getRequest()->requestVar('ID');
+        $class = Controller::curr()->getRequest()->requestVar('ClassName');
+
+        if (!$class && $this->value) {
+            $class = $this->value->dataClass();
+        }
+
+        if (!$index || !$class) {
+            throw new Exception('saveRecord() must be passed an ID and ClassName');
+        }
+
+        $record = $class::get()->byId($index);
+
+        if (!$record || !$record->canEdit()) {
+            return Controller::curr()->httpError(400);
+        }
+
+        // update the record
+        foreach ($this->manyChildren as $child) {
+            $child->setValue($request->requestVar($child->Name));
+            $child->saveInto($record);
+        }
+
+        $record->write();
+
+        return $this->forTemplate();
+    }
+
+    /**
+     * Displays a Form for a particular record
+     */
+    public function recordForm()
+    {
+        $request = Controller::curr()->getRequest();
+
+        if (!SecurityToken::inst()->checkRequest($request)) {
+            return Controller::curr()->httpError(400);
+        }
+
+        $index = Controller::curr()->getRequest()->getVar('RecordID');
+        $class = Controller::curr()->getRequest()->getVar('ClassName');
+
+        if (!$index || !$class) {
+            throw new Exception('recordForm() must be passed an RecordID and ClassName');
+        }
+
+        $record = $class::get()->byId($index);
+
+        if (!$record || !$record->canDelete()) {
+            return Controller::curr()->httpError(400);
+        }
+
+        $response = new HTTPResponse();
+        $edit = $this->generateRow(0, $record);
+        $edit->removeExtraClass('row manyfield__row');
+
+        $response->setBody($edit->FieldHolder());
+
+        return $response;
+    }
+
+    /**
+     * Deletes a record
+     */
+    public function deleteRecord()
+    {
+        $request = Controller::curr()->getRequest();
+
+        if (!SecurityToken::inst()->checkRequest($request)) {
+            return Controller::curr()->httpError(400);
+        }
+
+        $index = Controller::curr()->getRequest()->getVar('ID');
+        $class = Controller::curr()->getRequest()->getVar('ClassName');
+
+        if (!$index || !$class) {
+            throw new Exception('deleteRecord() must be passed an ID and ClassName');
+        }
+
+        $record = $class::get()->byId($index);
+
+        if (!$record || !$record->canDelete()) {
+            return Controller::curr()->httpError(400);
+        }
+
+        $record->delete();
+
+        return $this->forTemplate();
+    }
+
+    /**
+     * Add URL
+     *
+     * @return string
+     */
     public function AddLink()
     {
         return Controller::join_links(
@@ -301,6 +467,22 @@ class ManyField extends CompositeField
         );
     }
 
+    /**
+     * Add URL
+     *
+     * @return string
+     */
+    public function EditLink()
+    {
+        return Controller::join_links(
+            $this->AbsoluteLink('recordForm'),
+            '?SecurityID='. SecurityToken::inst()->getValue() . '&ClassName=' . $this->value->dataClass()
+        );
+    }
+
+    /**
+     * Override set value.
+     */
     public function setValue($value, $data = null)
     {
         if (!$value && $data) {
@@ -321,7 +503,7 @@ class ManyField extends CompositeField
     public function FieldList() {
         $output = FieldList::create();
         $index = 0;
-        
+
         if ($this->value) {
             foreach ($this->value as $record) {
                 $output->push($this->generateRow($index++, $record));
@@ -355,7 +537,7 @@ class ManyField extends CompositeField
         foreach ($this->manyChildren as $child) {
             $field = clone $child;
             $field->name = $this->name . '['.$child->name . ']['. $index . ']';
-            
+
             if ($value && $value->hasMethod($child->Name)) {
                 $field->setValue($value->{$child->name}());
             } else {
@@ -371,6 +553,12 @@ class ManyField extends CompositeField
             $row->push($field);
         }
 
+        if ($this->inlineSave) {
+            $row
+                ->addExtraClass('inline-save')
+                ->setAttribute('data-inline-save', $this->Link('saveRecord'));
+        }
+
         $this->extend('alterRow', $row);
 
         return $row;
@@ -380,7 +568,7 @@ class ManyField extends CompositeField
     {
         $create = Injector::inst()->create($this->value->dataClass());
         $create->write();
-        
+
         $this->value->add($create);
 
         return $create;
@@ -392,12 +580,12 @@ class ManyField extends CompositeField
     }
 
     /**
-     * Helper for going through all the values in this manymany field and 
+     * Helper for going through all the values in this manymany field and
      * delete or create new records. This method won't be perfect for every case
-     * but it'll handle most cases as long as the Field name matches the 
+     * but it'll handle most cases as long as the Field name matches the
      * relation name.
      */
-    public function updateRelation(DataObjectInterface $record, $delete = true) 
+    public function updateRelation(DataObjectInterface $record, $delete = true)
     {
         $existing = $record->{$this->name}();
         $removed = [];
@@ -439,7 +627,7 @@ class ManyField extends CompositeField
                 }
             }
         }
-        
+
         foreach ($this->value as $col => $values) {
             if ($col == 'ID') {
                 continue;
@@ -468,20 +656,20 @@ class ManyField extends CompositeField
             if (isset($idKeyMap[$key])) {
                 $record = $existing->find('ID', $idKeyMap[$key]);
             }
-            
+
             if ($record) {
                 foreach ($this->manyChildren as $childField) {
                     if (isset($data[$childField->Name])) {
                         $childField->setValue($data[$childField->Name]);
                     }
-                    
+
                     $childField->saveInto($record);
                 }
 
                 $record->write();
             } else {
                 $record = Injector::inst()->create($existing->dataClass());
-                
+
                 foreach ($this->manyChildren as $childField) {
                     if (isset($data[$childField->Name])) {
                         $childField->setValue($data[$childField->Name]);

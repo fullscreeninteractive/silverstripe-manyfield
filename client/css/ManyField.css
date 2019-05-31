@@ -1,3 +1,7 @@
 .many_field.inactive {
 	display: none;
 }
+
+.manyfield__outer.loading {
+	display: none;
+}

@@ -1,9 +1,9 @@
-<$Tag id="$HolderID" class="manyfield__holder field $extraClass <% if ColumnCount %>manyfield__holder--multicolumn<% end_if %> <% if canRemove %>manyfield__holder--canremove<% end_if %> <% if canSort %>manyfield__holder--cansort<% end_if %>">
+<$Tag id="$HolderID" class="manyfield__holder field $extraClass <% if ColumnCount %>manyfield__holder--multicolumn<% end_if %> <% if canRemove %>manyfield__holder--canremove<% end_if %> <% if canSort %>manyfield__holder--cansort<% end_if %>" <% if LoadFromAjax %>data-ajax-url="$LoadFromAjax"<% end_if %>>
 <% if $Tag == 'fieldset' && $Legend %>
     <legend>$Legend</legend>
 <% end_if %>
 
-<div class="manyfield__outer">
+<div class="manyfield__outer <% if LoadFromAjax %>loading<% end_if %>">
 <% loop FieldList %>
     <% if ColumnCount %>
         <div class="column-{$ColumnCount} $FirstLast">
