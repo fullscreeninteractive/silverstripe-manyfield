@@ -133,7 +133,7 @@
     $('body').on('click', '.manyfield__save', function(e) {
       var form = $(this).parents('.modal-content').find('form');
 
-      if (form.checkValidity()) {
+      if (form.get(0).checkValidity()) {
         var body = $(this).parents('.modal-content').find('.modal-body')
           .addClass('loading')
 
@@ -144,6 +144,8 @@
         })
       } else {
         e.preventDefault();
+
+        return false;
       }
     })
 
@@ -157,9 +159,10 @@
       // find the add modal, set the content to that and open it.
       var id = parents.attr('id');
       var modal = $('#' + id + '_modal');
+      var saveURL = modal.attr('data-save-url');
 
       $.get(modal.data('form-url'), {RecordID: recordId}, function(data) {
-        modal.find('.modal-body').html(data).removeClass('loading');
+        modal.find('.modal-body').html($('<form action="'+ saveURL + '"></form>').html(data)).removeClass('loading');
         modal.modal('show');
       });
     })

@@ -21,7 +21,7 @@
 </div>
 <% end_if %>
 
-<div class="modal" id="{$HolderID}_modal" data-form-url="$EditLink">
+<div class="modal" id="{$HolderID}_modal" data-form-url="$EditLink" data-save-url="$SaveLink">
   <div class="modal-dialog modal-lg" role="document">
     <div class="modal-content">
       <div class="modal-header">
@@ -35,7 +35,7 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-primary manyfield__save" data-dismiss="modal">Save</button>
+        <button type="button" class="btn btn-primary manyfield__save">Save</button>
         <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
       </div>
     </div><!-- /.modal-content -->

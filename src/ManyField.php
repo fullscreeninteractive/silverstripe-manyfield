@@ -468,7 +468,7 @@ class ManyField extends CompositeField
     }
 
     /**
-     * Add URL
+     * Edit Record Form URL
      *
      * @return string
      */
@@ -476,6 +476,19 @@ class ManyField extends CompositeField
     {
         return Controller::join_links(
             $this->AbsoluteLink('recordForm'),
+            '?SecurityID='. SecurityToken::inst()->getValue() . '&ClassName=' . $this->value->dataClass()
+        );
+    }
+
+    /**
+     * Save Record Form URL
+     *
+     * @return string
+     */
+    public function SaveLink()
+    {
+        return Controller::join_links(
+            $this->AbsoluteLink('saveRecord'),
             '?SecurityID='. SecurityToken::inst()->getValue() . '&ClassName=' . $this->value->dataClass()
         );
     }
