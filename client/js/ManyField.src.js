@@ -82,11 +82,21 @@
           var id = parents.attr('id');
           var modal = $("#" + id + '_modal');
 
-          modal.find('.modal-body').html($(data)
-            .find('.CompositeField')
-            .removeClass('manyfield__row').html()
-          );
+          // write the provided names as we don't need to namespace them in this
+          // case - we can only edit one at a time
+          var content = $(data)
+          content.find('input[name]').each(function(i, field) {
+            if ($(field).indexOf('[') !== false) {
+              var name = $(field).attr('name').substr(
+                $(field).attr('name').indexOf('[') + 1,
+                $(field).attr('name').indexOf(']')
+              );
 
+              $(field).attr('name', name);
+            }
+          });
+
+          modal.find('.modal-body').html(content.html());
           modal.modal('show');
         } else {
           if (rows && rows.length) {
@@ -143,6 +153,7 @@
           body.html('');
         })
       } else {
+        // highlight issues
         e.preventDefault();
 
         return false;
@@ -162,8 +173,22 @@
       var saveURL = modal.attr('data-save-url');
 
       $.get(modal.data('form-url'), {RecordID: recordId}, function(data) {
-        modal.find('.modal-body').html($('<form action="'+ saveURL + '"></form>').html(data)).removeClass('loading');
-        modal.modal('show');
+          // write the provided names as we don't need to namespace them in this
+          // case - we can only edit one at a time
+          var content = $('<form action="'+ saveURL + '"></form>').html(data)
+          content.find('input[name]').each(function(i, field) {
+            if ($(field).indexOf('[') !== false) {
+              var name = $(field).attr('name').substr(
+                $(field).attr('name').indexOf('[') + 1,
+                $(field).attr('name').indexOf(']')
+              );
+
+              $(field).attr('name', name);
+            }
+          });
+
+          modal.find('.modal-body').html(content).removeClass('loading');
+          modal.modal('show');
       });
     })
 

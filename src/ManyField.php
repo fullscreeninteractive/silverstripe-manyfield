@@ -499,7 +499,11 @@ class ManyField extends CompositeField
     public function setValue($value, $data = null)
     {
         if (!$value && $data) {
-            if ($data->hasMethod($this->name)) {
+            if (is_array($data)) {
+                if (isset($data[$this->name])) {
+                    $value = $data[$this->name];
+                }
+            } else if ($data->hasMethod($this->name)) {
                 $value = $data->{$this->name}();
             }
         }

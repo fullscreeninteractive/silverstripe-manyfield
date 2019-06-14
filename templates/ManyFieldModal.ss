@@ -36,7 +36,7 @@
 
       <div class="modal-footer">
         <button type="button" class="btn btn-primary manyfield__save">Save</button>
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
       </div>
     </div><!-- /.modal-content -->
   </div><!-- /.modal-dialog -->
