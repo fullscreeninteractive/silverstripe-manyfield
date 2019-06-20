@@ -5,7 +5,6 @@ namespace FullscreenInteractive\ManyField;
 use SilverStripe\Forms\CompositeField;
 use SilverStripe\View\Requirements;
 use SilverStripe\Forms\FieldList;
-use SilverStripe\Forms\CheckboxField;
 use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Controller;
@@ -393,7 +392,7 @@ class ManyField extends CompositeField
     }
 
     /**
-     * Displays a Form for a particular record
+     * Displays a Form for a particular record.
      */
     public function recordForm()
     {
@@ -417,7 +416,8 @@ class ManyField extends CompositeField
         }
 
         $response = new HTTPResponse();
-        $edit = $this->generateRow(0, $record);
+
+        $edit = $this->generateRow(0, $record, false);
         $edit->removeExtraClass('row manyfield__row');
 
         $response->setBody($edit->FieldHolder());
@@ -533,17 +533,53 @@ class ManyField extends CompositeField
         return $output;
     }
 
+    protected function updateManyNestedField($field, $index, $value, $prefixName) {
+        if ($prefixName) {
+            $field->name = $this->name . '['.$field->name . ']['. $index . ']';
+        }
+
+        if ($field instanceof CompositeField) {
+            foreach ($field->getChildren() as $c) {
+                $c = $this->updateManyNestedField($c, $index, $value, false);
+
+                if ($prefixName) {
+                    $c->name = $this->name . '['.$field->name . ']['. $index . ']['. $c->name.']';
+                }
+            }
+        } else {
+
+            if ($value && $value->hasMethod($field->Name)) {
+                $field->setValue($value->{$field->name}(), $value);
+            } else if (is_object($value)) {
+                $field->setValue($value->{$field->name}, $value);
+            } else if (is_array($value)) {
+                $field->setValue((isset($value[$field->name])) ? $value[$field->name] : null);
+            } else {
+                $field->setValue($value);
+            }
+        }
+
+        if (isset($this->fieldCallbacks[$field->name])) {
+            foreach ($this->fieldCallbacks[$field->name] as $cb) {
+                call_user_func($cb, $field, $index, $this, $value);
+            }
+        }
+
+        return $field;
+    }
+
     /**
      * Generates a unique row of form fields for this ManyField
      *
      * @param int $index
      * @param mixed value
+     * @param bool $prefixName
      *
      * @return CompositeField
      */
-    public function generateRow($index, $value = null)
+    public function generateRow($index, $value = null, $prefixName = true)
     {
-        $row = CompositeField::create();
+        $row = ManyFieldCompositeField::create();
         $row->addExtraClass("row manyfield__row");
 
         if (!$value && $this->callWriteOnNewRow) {
@@ -553,19 +589,8 @@ class ManyField extends CompositeField
 
         foreach ($this->manyChildren as $child) {
             $field = clone $child;
-            $field->name = $this->name . '['.$child->name . ']['. $index . ']';
+            $field = $this->updateManyNestedField($field, $index, $value, $prefixName);
 
-            if ($value && $value->hasMethod($child->Name)) {
-                $field->setValue($value->{$child->name}());
-            } else {
-                $field->setValue(($value) ? $value->{$child->name} : null);
-            }
-
-            if (isset($this->fieldCallbacks[$child->name])) {
-                foreach ($this->fieldCallbacks[$child->name] as $cb) {
-                    call_user_func($cb, $field, $index, $this, $value);
-                }
-            }
 
             $row->push($field);
         }
@@ -604,6 +629,10 @@ class ManyField extends CompositeField
      */
     public function updateRelation(DataObjectInterface $record, $delete = true)
     {
+        if ($this->inlineSave) {
+            return $this;
+        }
+
         $existing = $record->{$this->name}();
         $removed = [];
 

@@ -86,8 +86,8 @@
           // case - we can only edit one at a time
           var content = $(data)
           content.find('input[name]').each(function(i, field) {
-            if ($(field).indexOf('[') !== false) {
-              var name = $(field).attr('name').substr(
+            if ($(field).attr('name').indexOf('[') !== false) {
+              var name = $(field).attr('name').substring(
                 $(field).attr('name').indexOf('[') + 1,
                 $(field).attr('name').indexOf(']')
               );
@@ -143,6 +143,10 @@
     $('body').on('click', '.manyfield__save', function(e) {
       var form = $(this).parents('.modal-content').find('form');
 
+      $('body').trigger('manyFormModalSave', {
+        form
+      });
+
       if (form.get(0).checkValidity()) {
         var body = $(this).parents('.modal-content').find('.modal-body')
           .addClass('loading')
@@ -151,6 +155,12 @@
           // reply should be the updated content for
           form.parents('.manyfield__holder').html(reply);
           body.html('');
+
+          form.parents('.modal').modal('hide');
+
+          $('body').trigger('manyFormModalSaved', {
+            form
+          });
         })
       } else {
         // highlight issues
@@ -176,17 +186,6 @@
           // write the provided names as we don't need to namespace them in this
           // case - we can only edit one at a time
           var content = $('<form action="'+ saveURL + '"></form>').html(data)
-          content.find('input[name]').each(function(i, field) {
-            if ($(field).indexOf('[') !== false) {
-              var name = $(field).attr('name').substr(
-                $(field).attr('name').indexOf('[') + 1,
-                $(field).attr('name').indexOf(']')
-              );
-
-              $(field).attr('name', name);
-            }
-          });
-
           modal.find('.modal-body').html(content).removeClass('loading');
           modal.modal('show');
       });

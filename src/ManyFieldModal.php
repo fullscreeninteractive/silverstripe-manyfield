@@ -4,6 +4,7 @@ namespace FullscreenInteractive\ManyField;
 
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\View\ArrayData;
 use SilverStripe\Security\SecurityToken;
 
@@ -54,6 +55,12 @@ use SilverStripe\Security\SecurityToken;
         }
 
         return $output;
+    }
+
+    public function updateRelation(DataObjectInterface $record, $delete = true)
+    {
+        // no-op. As managed inline.
+        return $this;
     }
 
  }
