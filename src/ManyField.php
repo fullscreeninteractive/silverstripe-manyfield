@@ -399,7 +399,7 @@ class ManyField extends CompositeField
         $request = Controller::curr()->getRequest();
 
         if (!SecurityToken::inst()->checkRequest($request)) {
-            return Controller::curr()->httpError(400);
+            return Controller::curr()->httpError(400, 'Missing security token');
         }
 
         $index = Controller::curr()->getRequest()->getVar('RecordID');
@@ -411,7 +411,7 @@ class ManyField extends CompositeField
 
         $record = $class::get()->byId($index);
 
-        if (!$record || !$record->canDelete()) {
+        if (!$record || !$record->canEdit()) {
             return Controller::curr()->httpError(400);
         }
 

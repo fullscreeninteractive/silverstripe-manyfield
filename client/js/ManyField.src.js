@@ -157,6 +157,8 @@
           body.html('');
 
           form.parents('.modal').modal('hide');
+          $('body').removeClass('modal-open');
+          $('.modal-backdrop').remove();
 
           $('body').trigger('manyFormModalSaved', {
             form
