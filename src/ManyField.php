@@ -534,6 +534,8 @@ class ManyField extends CompositeField
     }
 
     protected function updateManyNestedField($field, $index, $value, $prefixName) {
+        $name = $field->name;
+
         if ($prefixName) {
             $field->name = $this->name . '['.$field->name . ']['. $index . ']';
         }
@@ -547,20 +549,19 @@ class ManyField extends CompositeField
                 }
             }
         } else {
-
-            if ($value && $value->hasMethod($field->Name)) {
-                $field->setValue($value->{$field->name}(), $value);
+            if ($value && $value->hasMethod($name)) {
+                $field->setValue($value->{$name}(), $value);
             } else if (is_object($value)) {
-                $field->setValue($value->{$field->name}, $value);
+                $field->setValue($value->{$name}, $value);
             } else if (is_array($value)) {
-                $field->setValue((isset($value[$field->name])) ? $value[$field->name] : null);
+                $field->setValue((isset($value[$name])) ? $value[$name] : null);
             } else {
                 $field->setValue($value);
             }
         }
 
-        if (isset($this->fieldCallbacks[$field->name])) {
-            foreach ($this->fieldCallbacks[$field->name] as $cb) {
+        if (isset($this->fieldCallbacks[$name])) {
+            foreach ($this->fieldCallbacks[$name] as $cb) {
                 call_user_func($cb, $field, $index, $this, $value);
             }
         }
@@ -590,7 +591,6 @@ class ManyField extends CompositeField
         foreach ($this->manyChildren as $child) {
             $field = clone $child;
             $field = $this->updateManyNestedField($field, $index, $value, $prefixName);
-
 
             $row->push($field);
         }
