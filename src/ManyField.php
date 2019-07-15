@@ -74,6 +74,11 @@ class ManyField extends CompositeField
     protected $ajaxUrl = false;
 
     /**
+     * @var string
+     */
+    protected $manyFieldDataClass;
+
+    /**
      * Does creating a new row automatically call write to the database?
      *
      * If you use things such as UploadField which requires an ID then it is
@@ -366,12 +371,20 @@ class ManyField extends CompositeField
         $index = Controller::curr()->getRequest()->requestVar('ID');
         $class = Controller::curr()->getRequest()->requestVar('ClassName');
 
+        if (!$class) {
+            $class = $this->manyFieldDataClass;
+        }
+
         if (!$class && $this->value) {
             $class = $this->value->dataClass();
         }
 
         if (!$index || !$class) {
             throw new Exception('saveRecord() must be passed an ID and ClassName');
+        }
+
+        if ($this->manyFieldDataClass && $class !== $this->manyFieldDataClass) {
+            throw new Exception('Invalid ClassName passed');
         }
 
         $record = $class::get()->byId($index);
@@ -405,14 +418,22 @@ class ManyField extends CompositeField
         $index = Controller::curr()->getRequest()->getVar('RecordID');
         $class = Controller::curr()->getRequest()->getVar('ClassName');
 
+        if (!$class) {
+            $class = $this->manyFieldDataClass;
+        }
+
         if (!$index || !$class) {
             throw new Exception('recordForm() must be passed an RecordID and ClassName');
+        }
+
+        if ($this->manyFieldDataClass && $class !== $this->manyFieldDataClass) {
+            throw new Exception('Invalid ClassName passed');
         }
 
         $record = $class::get()->byId($index);
 
         if (!$record || !$record->canEdit()) {
-            return Controller::curr()->httpError(400);
+            return Controller::curr()->httpError(404);
         }
 
         $response = new HTTPResponse();
@@ -439,8 +460,16 @@ class ManyField extends CompositeField
         $index = Controller::curr()->getRequest()->getVar('ID');
         $class = Controller::curr()->getRequest()->getVar('ClassName');
 
+        if (!$class) {
+            $class = $this->manyFieldDataClass;
+        }
+
         if (!$index || !$class) {
             throw new Exception('deleteRecord() must be passed an ID and ClassName');
+        }
+
+        if ($this->manyFieldDataClass && $class !== $this->manyFieldDataClass) {
+            throw new Exception('Invalid ClassName passed');
         }
 
         $record = $class::get()->byId($index);
@@ -452,6 +481,18 @@ class ManyField extends CompositeField
         $record->delete();
 
         return $this->forTemplate();
+    }
+
+    /**
+     * @param string
+     *
+     * @return self
+     */
+    public function setDataClass($class)
+    {
+        $this->manyFieldDataClass = $class;
+
+        return $this;
     }
 
     /**
@@ -634,8 +675,6 @@ class ManyField extends CompositeField
         }
 
         $existing = $record->{$this->name}();
-        $removed = [];
-
         // if no value then we should clear everything out
         if (!$this->value && $this->canRemove) {
             if ($delete) {
