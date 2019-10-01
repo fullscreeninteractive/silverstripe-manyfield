@@ -14,6 +14,7 @@ use SilverStripe\Security\SecurityToken;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Control\HTTPResponse;
 use Exception;
+use SilverStripe\ORM\SS_List;
 
 class ManyField extends CompositeField
 {
@@ -379,15 +380,19 @@ class ManyField extends CompositeField
             $class = $this->value->dataClass();
         }
 
-        if (!$index || !$class) {
-            throw new Exception('saveRecord() must be passed an ID and ClassName');
+        if (!$class) {
+            throw new Exception('saveRecord() must be passed a ClassName');
         }
 
         if ($this->manyFieldDataClass && $class !== $this->manyFieldDataClass) {
             throw new Exception('Invalid ClassName passed');
         }
 
-        $record = $class::get()->byId($index);
+        if (!$index) {
+            $record = $class::create();
+        } else {
+            $record = $class::get()->byId($index);
+        }
 
         if (!$record || !$record->canEdit()) {
             return Controller::curr()->httpError(400);
@@ -649,10 +654,17 @@ class ManyField extends CompositeField
 
     public function createPhysicalRecord()
     {
-        $create = Injector::inst()->create($this->value->dataClass());
+        if ($this->manyFieldDataClass) {
+            $create = Injector::inst()->create($this->manyFieldDataClass);
+        } else {
+            $create = Injector::inst()->create($this->value->dataClass());
+        }
+
         $create->write();
 
-        $this->value->add($create);
+        if ($this->value instanceof SS_List) {
+            $this->value->add($create);
+        }
 
         return $create;
     }
@@ -675,6 +687,7 @@ class ManyField extends CompositeField
         }
 
         $existing = $record->{$this->name}();
+
         // if no value then we should clear everything out
         if (!$this->value && $this->canRemove) {
             if ($delete) {
@@ -712,6 +725,8 @@ class ManyField extends CompositeField
                 }
             }
         }
+
+        $updatedData = [];
 
         foreach ($this->value as $col => $values) {
             if ($col == 'ID') {

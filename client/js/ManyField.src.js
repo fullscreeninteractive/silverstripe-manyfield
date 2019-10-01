@@ -12,11 +12,14 @@
         $(elem).find('.manyfield__row').each(function (r, row) {
           if (canRemove) {
             if (!$(row).find('.manyfield__remove').length) {
-              var href = $(this).data('inline-save').replace('saveRecord', 'deleteRecord');
+              var href = $(this).data('inline-save');
 
-              href = href + '?ID='+ $(row).find('[name=ID]').val();
+              if (href) {
+                href.replace('saveRecord', 'deleteRecord');
+                href = href + '?ID='+ $(row).find('[name=ID]').val();
 
-              $(row).prepend('<a class="btn btn-sm btn-danger manyfield__remove" href="' + href + '"><i class="fa fa-times"></i></a>');
+                $(row).prepend('<a class="btn btn-sm btn-danger manyfield__remove" href="' + href + '"><i class="fa fa-times"></i></a>');
+              }
             }
           } else {
             field.find('.manyfield__remove').remove();
