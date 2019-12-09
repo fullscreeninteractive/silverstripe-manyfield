@@ -228,6 +228,10 @@ class ManyField extends CompositeField
      * @return boolean
      */
     public function canAdd() {
+        if ($this->readonly) {
+            return false;
+        }
+
         return $this->canAdd;
     }
 
@@ -235,6 +239,10 @@ class ManyField extends CompositeField
      * @return boolean
      */
     public function canRemove() {
+        if ($this->readonly) {
+            return false;
+        }
+
         return $this->canRemove;
     }
 
@@ -242,6 +250,10 @@ class ManyField extends CompositeField
      * @return boolean
      */
     public function canSort() {
+        if ($this->readonly) {
+            return false;
+        }
+
         return $this->canSort;
     }
 
@@ -369,6 +381,10 @@ class ManyField extends CompositeField
             return Controller::curr()->httpError(400);
         }
 
+        if ($this->readonly) {
+            return Controller::curr()->httpError(401);
+        }
+
         $index = Controller::curr()->getRequest()->requestVar('ID');
         $class = Controller::curr()->getRequest()->requestVar('ClassName');
 
@@ -437,7 +453,7 @@ class ManyField extends CompositeField
 
         $record = $class::get()->byId($index);
 
-        if (!$record || !$record->canEdit()) {
+        if (!$record || !$record->canView()) {
             return Controller::curr()->httpError(404);
         }
 
@@ -445,7 +461,6 @@ class ManyField extends CompositeField
 
         $edit = $this->generateRow(0, $record, false);
         $edit->removeExtraClass('row manyfield__row');
-
         $response->setBody($edit->FieldHolder());
 
         return $response;
@@ -460,6 +475,10 @@ class ManyField extends CompositeField
 
         if (!SecurityToken::inst()->checkRequest($request)) {
             return Controller::curr()->httpError(400);
+        }
+
+        if ($this->readonly) {
+            return Controller::curr()->httpError(401);
         }
 
         $index = Controller::curr()->getRequest()->getVar('ID');
@@ -637,6 +656,9 @@ class ManyField extends CompositeField
         foreach ($this->manyChildren as $child) {
             $field = clone $child;
             $field = $this->updateManyNestedField($field, $index, $value, $prefixName);
+
+            $field = $field->setReadonly($this->readonly);
+            $field = $field->setDisabled($this->readonly);
 
             $row->push($field);
         }
