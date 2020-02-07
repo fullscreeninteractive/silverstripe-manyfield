@@ -474,7 +474,7 @@ class ManyField extends CompositeField
         $request = Controller::curr()->getRequest();
 
         if (!SecurityToken::inst()->checkRequest($request)) {
-            return Controller::curr()->httpError(400);
+            return Controller::curr()->httpError(400, 'Bad security token');
         }
 
         if ($this->readonly) {
@@ -499,7 +499,7 @@ class ManyField extends CompositeField
         $record = $class::get()->byId($index);
 
         if (!$record || !$record->canDelete()) {
-            return Controller::curr()->httpError(400);
+            return Controller::curr()->httpError(404, 'No record found with that ID');
         }
 
         $record->delete();
@@ -660,13 +660,21 @@ class ManyField extends CompositeField
             $field = $field->setReadonly($this->readonly);
             $field = $field->setDisabled($this->readonly);
 
-            $row->push($field);
+            if ($value && $value->hasMethod('modifyManyRecordField')) {
+                $field = $value->modifyManyRecordField($field);
+            }
+
+            if ($field) {
+                $row->push($field);
+            }
         }
+
 
         if ($this->inlineSave) {
             $row
                 ->addExtraClass('inline-save')
-                ->setAttribute('data-inline-save', $this->Link('saveRecord'));
+                ->setAttribute('data-inline-save', $this->Link('saveRecord'))
+                ->setAttribute('data-inline-delete', $this->Link('deleteRecord'));;
         }
 
         $this->extend('alterRow', $row);
