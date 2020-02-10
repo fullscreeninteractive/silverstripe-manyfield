@@ -601,10 +601,6 @@ class ManyField extends CompositeField
     protected function updateManyNestedField($field, $index, $value, $prefixName) {
         $name = $field->name;
 
-        if ($prefixName) {
-            $field->name = $this->name . '['.$field->name . ']['. $index . ']';
-        }
-
         if ($field instanceof CompositeField) {
             foreach ($field->getChildren() as $c) {
                 $c = $this->updateManyNestedField($c, $index, $value, false);
@@ -622,6 +618,10 @@ class ManyField extends CompositeField
                 $field->setValue((isset($value[$name])) ? $value[$name] : null);
             } else {
                 $field->setValue($value);
+            }
+
+            if ($prefixName) {
+                $field->name = $this->name . '['.$field->name . ']['. $index . ']';
             }
         }
 
