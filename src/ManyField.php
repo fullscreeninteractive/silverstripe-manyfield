@@ -610,7 +610,7 @@ class ManyField extends CompositeField
                 }
             }
         } else {
-            if ($value && $value->hasMethod($name)) {
+            if ($value && is_object($value) && $value->hasMethod($name)) {
                 $field->setValue($value->{$name}(), $value);
             } else if (is_object($value)) {
                 $field->setValue($value->{$name}, $value);
@@ -660,7 +660,7 @@ class ManyField extends CompositeField
             $field = $field->setReadonly($this->readonly);
             $field = $field->setDisabled($this->readonly);
 
-            if ($value && $value->hasMethod('modifyManyRecordField')) {
+            if ($value && is_object($value) && $value->hasMethod('modifyManyRecordField')) {
                 $field = $value->modifyManyRecordField($field);
             }
 
