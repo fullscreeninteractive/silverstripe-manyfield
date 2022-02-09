@@ -3,9 +3,12 @@
 namespace FullscreenInteractive\ManyField;
 
 use Dotenv\Exception\ValidationException;
+use Exception;
 use SilverStripe\Forms\GridField\GridField;
 use FullscreenInteractive\ManyField\ManyField;
+use Psr\Log\LoggerInterface;
 use SilverStripe\Assets\Upload;
+use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\GridField\GridFieldButtonRow;
 use SilverStripe\Forms\GridField\GridFieldConfig;
@@ -156,9 +159,18 @@ class EditableManyField extends EditableFormField
 
         foreach ($this->Children() as $field)
         {
-            foreach ($incoming[$field->Name] as $i => $value) {
-                if ($value && !empty($value)) {
-                    $rowHasValue[$i] = true;
+            if (isset($incoming[$field->Name])) {
+                foreach ($incoming[$field->Name] as $i => $value) {
+                    if ($value && !empty($value)) {
+                        $rowHasValue[$i] = true;
+                    }
+                }
+            } elseif (isset($incoming['name']) && isset($incoming['name'][$field->Name])) {
+                // handle multi-part
+                foreach ($incoming['name'][$field->Name] as $i => $value) {
+                    if ($value && !empty($value)) {
+                        $rowHasValue[$i] = true;
+                    }
                 }
             }
         }
@@ -167,21 +179,37 @@ class EditableManyField extends EditableFormField
 
         foreach ($this->Children() as $field)
         {
-            foreach ($incoming[$field->Name] as $i => $value) {
-                if (!isset($rowHasValue[$i])) {
-                    // empty row;
-                    continue;
+            if (isset($incoming[$field->Name])) {
+                foreach ($incoming[$field->Name] as $i => $value) {
+                    if (!isset($rowHasValue[$i])) {
+                        // empty row;
+                        continue;
+                    }
+
+                    if (!isset($rows[$i])) {
+                        $rows[$i] = [];
+                    }
+
+                    $submittedField = $this->createNestedSubmittedFormField($field, [
+                        $field->Name => $value
+                    ]);
+
+                    $rows[$i][$field->Name] = $submittedField->ID;
                 }
+            } elseif (isset($incoming['name']) && isset($incoming['name'][$field->Name])) {
+                // handle multi-part
+                foreach ($incoming['name'][$field->Name] as $i => $value) {
+                    if (!isset($rowHasValue[$i])) {
+                        // empty row;
+                        continue;
+                    }
 
-                if (!isset($rows[$i])) {
-                    $rows[$i] = [];
+                    $submittedField = $this->createNestedSubmittedFormField($field, [
+                        $field->Name => $value
+                    ]);
+
+                    $rows[$i][$field->Name] = $submittedField->ID;
                 }
-
-                $submittedField = $this->createNestedSubmittedFormField($field, [
-                    $field->Name => $value
-                ]);
-
-                $rows[$i][$field->Name] = $submittedField->ID;
             }
         }
 
@@ -204,26 +232,42 @@ class EditableManyField extends EditableFormField
             }
         }
 
-        if (!empty($data[$field->Name])) {
-            if (in_array(EditableFileField::class, $field->getClassAncestry())) {
-                if (!empty($_FILES[$field->Name]['name'])) {
-                    $foldername = $field->getFormField()->getFolderName();
-                    $upload = Upload::create();
+        $file = null;
+        if (!empty($_FILES[$field->Name]['name'])) {
+            $file = $_FILES[$field->Name];
+        } else if (!empty($_FILES[$this->Name]['name'])) {
+            if (!empty($_FILES[$this->Name]['name'][$field->Name])) {
+                $file = [
+                    'tmp_name' => $_FILES[$this->Name]['tmp_name'][$field->Name][0],
+                    'type' => $_FILES[$this->Name]['type'][$field->Name][0],
+                    'name' => $_FILES[$this->Name]['name'][$field->Name][0],
+                    'error' => $_FILES[$this->Name]['error'][$field->Name][0],
+                    'size' => $_FILES[$this->Name]['size'][$field->Name][0]
+                ];
+            }
+        }
 
-                    try {
-                        $upload->loadIntoFile($_FILES[$field->Name], null, $foldername);
+        if ($file) {
+            $foldername = $field->getFormField()->getFolderName();
+            $upload = Upload::create();
 
-                        /** @var AssetContainer|File $file */
-                        $file = $upload->getFile();
-                        $file->ShowInSearch = 0;
-                        $file->UserFormUpload = UserFormFileExtension::USER_FORM_UPLOAD_TRUE;
-                        $file->write();
+            try {
+                $result = $upload->loadIntoFile($file, null, $foldername);
 
-                        $submittedField->UploadedFileID = $file->ID;
-                    } catch (ValidationException $e) {
+                /** @var AssetContainer|File $fileObj */
+                $fileObj = $upload->getFile();
 
-                    }
+                if ($result && $fileObj) {
+                    $fileObj->ShowInSearch = 0;
+                    $fileObj->UserFormUpload = UserFormFileExtension::USER_FORM_UPLOAD_TRUE;
+                    $fileObj->write();
+
+                    $submittedField->UploadedFileID = $fileObj->ID;
+                } else {
+                    throw new Exception('Could not upload files: %s', implode($upload->getErrors()));
                 }
+            } catch (ValidationException $e) {
+                Injector::inst()->get(LoggerInterface::class)->error($e);
             }
         }
 
