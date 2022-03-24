@@ -588,7 +588,8 @@ class ManyField extends CompositeField
 
         if ($this->value) {
             foreach ($this->value as $record) {
-                $output->push($this->generateRow($index++, $record));
+                $row = $this->generateRow($index++, $record);
+                $output->push($row);
             }
         } else {
             // display one if none exist.
@@ -655,13 +656,28 @@ class ManyField extends CompositeField
 
         foreach ($this->manyChildren as $child) {
             $field = clone $child;
+            $originalName = $field->name;
             $field = $this->updateManyNestedField($field, $index, $value, $prefixName);
 
             $field = $field->setReadonly($this->readonly);
             $field = $field->setDisabled($this->readonly);
 
-            if ($value && is_object($value) && $value->hasMethod('modifyManyRecordField')) {
-                $field = $value->modifyManyRecordField($field);
+            if ($value) {
+                if (is_object($value) && $value->hasMethod('modifyManyRecordField')) {
+                    $field = $value->modifyManyRecordField($field);
+                } else {
+                    $value = $this->value;
+
+                    if (is_object($value)) {
+                        $field = $field->setValue($value->{$field->name}, $value);
+                    } else if (is_array($value)) {
+                        if (isset($value[$originalName])) {
+                            $field = $field->setValue((isset($value[$originalName][$index])) ? $value[$originalName][$index] : null);
+                        } elseif (isset($value[$index][$originalName])) {
+                            $field = $field->setValue((isset($value[$index][$originalName])) ? $value[$index][$originalName] : null);
+                        }
+                    }
+                }
             }
 
             if ($field) {
