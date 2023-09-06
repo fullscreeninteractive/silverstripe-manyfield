@@ -8,16 +8,18 @@
         "silverstripe",
         "versioned"
     ],
-    "authors": [{
-        "name": "Will Rossiter",
-        "homepage": "http://www.fullscreen.io"
-    }],
+    "authors": [
+        {
+            "name": "Will Rossiter",
+            "homepage": "http://www.fullscreen.io"
+        }
+    ],
     "require": {
-        "silverstripe/framework": "^4",
-        "silverstripe/vendor-plugin": "^1"
+        "silverstripe/framework": "^5",
+        "silverstripe/vendor-plugin": "^2"
     },
     "require-dev": {
-        "phpunit/phpunit": "^5.7"
+        "phpunit/phpunit": "^9.5"
     },
     "autoload": {
         "psr-4": {
@@ -25,14 +27,18 @@
             "FullscreenInteractive\\ManyField\\Tests\\": "tests/php/"
         }
     },
-    "scripts": {
-
-    },
+    "scripts": {},
     "extra": {
         "expose": [
             "client"
         ]
     },
     "minimum-stability": "dev",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "composer/installers": true,
+            "silverstripe/vendor-plugin": true
+        }
+    }
 }
