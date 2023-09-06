@@ -103,7 +103,8 @@ class ManyField extends CompositeField
      * @param string $name
      * @param array $children
      */
-    public function __construct($name, $children = null) {
+    public function __construct($name, $children = null)
+    {
         Requirements::javascript('fullscreeninteractive/silverstripe-manyfield:client/js/ManyField.src.js');
         Requirements::css('fullscreeninteractive/silverstripe-manyfield:client/css/ManyField.css');
 
@@ -127,7 +128,8 @@ class ManyField extends CompositeField
      * @param string $field
      * @param callable $callback
      */
-    public function addFieldCallback($field, $callback) {
+    public function addFieldCallback($field, $callback)
+    {
         if (!isset($this->fieldCallbacks[$field])) {
             $this->fieldCallbacks[$field] = [];
         }
@@ -142,7 +144,8 @@ class ManyField extends CompositeField
      *
      * @return $this
      */
-    public function setMinRecords($minRecords) {
+    public function setMinRecords($minRecords)
+    {
         $this->minRecords = $minRecords;
 
         return $this;
@@ -151,7 +154,8 @@ class ManyField extends CompositeField
     /**
      * @return int
      */
-    public function getMinRecords() {
+    public function getMinRecords()
+    {
         return $this->minRecords;
     }
 
@@ -160,7 +164,8 @@ class ManyField extends CompositeField
      *
      * @return $this
      */
-    public function setMaxRecords($maxRecords) {
+    public function setMaxRecords($maxRecords)
+    {
         $this->maxRecords = $maxRecords;
 
         return $this;
@@ -169,7 +174,8 @@ class ManyField extends CompositeField
     /**
      * @return int
      */
-    public function getMaxRecords() {
+    public function getMaxRecords()
+    {
         return $this->maxFields;
     }
 
@@ -178,7 +184,8 @@ class ManyField extends CompositeField
      *
      * @return $this
      */
-    public function setInlineSave($inlineSave) {
+    public function setInlineSave($inlineSave)
+    {
         $this->inlineSave = $inlineSave;
 
         return $this;
@@ -187,7 +194,8 @@ class ManyField extends CompositeField
     /**
      * @return int
      */
-    public function getInlineSave() {
+    public function getInlineSave()
+    {
         return $this->inlineSave;
     }
 
@@ -196,7 +204,8 @@ class ManyField extends CompositeField
      *
      * @return $this
      */
-    public function setCanSort($bool) {
+    public function setCanSort($bool)
+    {
         $this->canSort = $bool;
 
         return $this;
@@ -207,7 +216,8 @@ class ManyField extends CompositeField
      *
      * @return $this
      */
-    public function setCanRemove($bool) {
+    public function setCanRemove($bool)
+    {
         $this->canRemove = $bool;
 
         return $this;
@@ -218,7 +228,8 @@ class ManyField extends CompositeField
      *
      * @return $this
      */
-    public function setCanAdd($bool) {
+    public function setCanAdd($bool)
+    {
         $this->canAdd = $bool;
 
         return $this;
@@ -227,7 +238,8 @@ class ManyField extends CompositeField
     /**
      * @return boolean
      */
-    public function canAdd() {
+    public function canAdd()
+    {
         if ($this->readonly) {
             return false;
         }
@@ -238,7 +250,8 @@ class ManyField extends CompositeField
     /**
      * @return boolean
      */
-    public function canRemove() {
+    public function canRemove()
+    {
         if ($this->readonly) {
             return false;
         }
@@ -249,7 +262,8 @@ class ManyField extends CompositeField
     /**
      * @return boolean
      */
-    public function canSort() {
+    public function canSort()
+    {
         if ($this->readonly) {
             return false;
         }
@@ -337,8 +351,8 @@ class ManyField extends CompositeField
      */
     public function saveInto(DataObjectInterface $record)
     {
-        if ($record->hasMethod('set'. $this->name)) {
-            $func = 'set'. $this->name;
+        if ($record->hasMethod('set' . $this->name)) {
+            $func = 'set' . $this->name;
             $record->$func($this);
         } else if ($record->hasField($this->name)) {
             $record->setCastedField($this->name, json_encode($this->dataValue()));
@@ -528,7 +542,7 @@ class ManyField extends CompositeField
     {
         return Controller::join_links(
             $this->AbsoluteLink('createNewRecord'),
-            '?SecurityID='. SecurityToken::inst()->getValue()
+            '?SecurityID=' . SecurityToken::inst()->getValue()
         );
     }
 
@@ -541,7 +555,7 @@ class ManyField extends CompositeField
     {
         return Controller::join_links(
             $this->AbsoluteLink('recordForm'),
-            '?SecurityID='. SecurityToken::inst()->getValue() . '&ClassName=' . $this->value->dataClass()
+            '?SecurityID=' . SecurityToken::inst()->getValue() . '&ClassName=' . $this->value->dataClass()
         );
     }
 
@@ -554,7 +568,7 @@ class ManyField extends CompositeField
     {
         return Controller::join_links(
             $this->AbsoluteLink('saveRecord'),
-            '?SecurityID='. SecurityToken::inst()->getValue() . '&ClassName=' . $this->value->dataClass()
+            '?SecurityID=' . SecurityToken::inst()->getValue() . '&ClassName=' . $this->value->dataClass()
         );
     }
 
@@ -582,7 +596,8 @@ class ManyField extends CompositeField
      *
      * @return FieldList
      */
-    public function FieldList() {
+    public function FieldList()
+    {
         $output = FieldList::create();
         $index = 0;
 
@@ -599,7 +614,8 @@ class ManyField extends CompositeField
         return $output;
     }
 
-    protected function updateManyNestedField($field, $index, $value, $prefixName) {
+    protected function updateManyNestedField($field, $index, $value, $prefixName)
+    {
         $name = $field->name;
 
         if ($field instanceof CompositeField) {
@@ -607,7 +623,7 @@ class ManyField extends CompositeField
                 $c = $this->updateManyNestedField($c, $index, $value, false);
 
                 if ($prefixName) {
-                    $c->setName($this->name . '['.$field->name . ']['. $index . ']['. $c->name.']');
+                    $c->setName($this->name . '[' . $field->name . '][' . $index . '][' . $c->name . ']');
                 }
             }
         } else {
@@ -622,7 +638,7 @@ class ManyField extends CompositeField
             }
 
             if ($prefixName) {
-                $field->setName($this->name . '['.$field->name . ']['. $index . ']');
+                $field->setName($this->name . '[' . $field->name . '][' . $index . ']');
             }
         }
 
@@ -690,7 +706,7 @@ class ManyField extends CompositeField
             $row
                 ->addExtraClass('inline-save')
                 ->setAttribute('data-inline-save', $this->Link('saveRecord'))
-                ->setAttribute('data-inline-delete', $this->Link('deleteRecord'));;
+                ->setAttribute('data-inline-delete', $this->Link('deleteRecord'));
         }
 
         $this->extend('alterRow', $row);
