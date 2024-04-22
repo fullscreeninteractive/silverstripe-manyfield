@@ -126,7 +126,7 @@ class EditableManyField extends EditableFormField
             $children[] = $editableFormField->getFormField();
         }
 
-        $field = ManyField::create($this->Name, FieldList::create($children))
+        $field = ManyField::create($this->Name, FieldList::create($children), $this->Title)
             ->setCanSort(false)
             ->setMinRecords(1);
 
