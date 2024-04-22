@@ -103,7 +103,7 @@ class ManyField extends CompositeField
      * @param string $name
      * @param array $children
      */
-    public function __construct($name, $children = null)
+    public function __construct($name, $children = null, $title = null)
     {
         Requirements::javascript('fullscreeninteractive/silverstripe-manyfield:client/js/ManyField.src.js');
         Requirements::css('fullscreeninteractive/silverstripe-manyfield:client/css/ManyField.css');
@@ -118,7 +118,7 @@ class ManyField extends CompositeField
 
         $this->brokenOnConstruct = false;
 
-        FormField::__construct($name, null);
+        FormField::__construct($name, $title);
     }
 
     /**
