@@ -1,0 +1,2 @@
+<% loop $Rows %><% if $HeaderRow %><% loop $Columns %>$Title<% if not $IsLast %>  |  <% end_if %><% end_loop %><% end_if %>
+<% loop $Columns %>$FormattedValue<% if not $IsLast %>  |  <% end_if %><% end_loop %><% end_loop %>

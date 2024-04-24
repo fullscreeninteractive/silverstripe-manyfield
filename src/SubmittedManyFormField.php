@@ -76,7 +76,7 @@ class SubmittedManyFormField extends SubmittedFormField
      */
     public function getExportValue()
     {
-        return $this->Value;
+        return $this->renderWith('Includes/SubmittedManyFormFieldExport');
     }
 
 
