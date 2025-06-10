@@ -17,15 +17,19 @@ use SilverStripe\Forms\GridField\GridFieldDetailForm;
 use SilverStripe\Forms\GridField\GridFieldEditButton;
 use SilverStripe\Forms\GridField\GridFieldPaginator;
 use SilverStripe\Forms\GridField\GridFieldToolbarHeader;
+use SilverStripe\Forms\LiteralField;
 use SilverStripe\UserForms\Extension\UserFormFileExtension;
 use SilverStripe\UserForms\Form\GridFieldAddClassesButton;
 use SilverStripe\UserForms\Model\EditableFormField;
+use SilverStripe\UserForms\Model\EditableFormField\EditableFieldGroup;
+use SilverStripe\UserForms\Model\EditableFormField\EditableFieldGroupEnd;
 use SilverStripe\UserForms\Model\EditableFormField\EditableFileField;
+use SilverStripe\UserForms\Model\EditableFormField\EditableFormStep;
 use SilverStripe\UserForms\Model\EditableFormField\EditableTextField;
 use Symbiote\GridFieldExtensions\GridFieldEditableColumns;
 use Symbiote\GridFieldExtensions\GridFieldOrderableRows;
 
-if (class_exists(EditableFormField::class)) {
+if (!class_exists(EditableFormField::class)) {
     return;
 }
 
@@ -61,6 +65,9 @@ class EditableManyField extends EditableFormField
     public function getCMSFields()
     {
         $this->beforeUpdateCMSFields(function (FieldList $fields) {
+            $fields->removeByName('Children');
+            $fields->removeByName('Default');
+
             $editableColumns = new GridFieldEditableColumns();
             $fieldClasses = singleton(EditableFormField::class)->getEditableFieldClasses();
             $editableColumns->setDisplayFields([
@@ -102,14 +109,23 @@ class EditableManyField extends EditableFormField
                     new GridFieldPaginator(999)
                 );
 
-            $fields->addFieldsToTab('Root.Main', [
-                GridField::create(
-                    'Children',
-                    'Children',
-                    $this->Children(),
-                    $config
-                )
-            ]);
+            if ($this->isInDB()) {
+                $fields->addFieldsToTab('Root.Main', [
+                    GridField::create(
+                        'Children',
+                        '',
+                        $this->Children(),
+                        $config
+                    )
+                ]);
+            } else {
+                $fields->addFieldsToTab('Root.Main', [
+                    LiteralField::create(
+                        'Children',
+                        '<p class="alert alert-info">' . _t(__CLASS__ . '.NO_DATA', 'Save this form to see the fields') . '</p>'
+                    )
+                ]);
+            }
         });
 
         return parent::getCMSFields();
@@ -157,8 +173,7 @@ class EditableManyField extends EditableFormField
         // unset any rows which don't have any values at all
         $rowHasValue = [];
 
-        foreach ($this->Children() as $field)
-        {
+        foreach ($this->Children() as $field) {
             if (isset($incoming[$field->Name])) {
                 foreach ($incoming[$field->Name] as $i => $value) {
                     if ($value && !empty($value)) {
@@ -177,8 +192,7 @@ class EditableManyField extends EditableFormField
 
         $rows = [];
 
-        foreach ($this->Children() as $field)
-        {
+        foreach ($this->Children() as $field) {
             if (isset($incoming[$field->Name])) {
                 foreach ($incoming[$field->Name] as $i => $value) {
                     if (!isset($rowHasValue[$i])) {
