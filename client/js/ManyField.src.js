@@ -23,10 +23,13 @@
 
                   href = href + "?ID=" + id.val();
                 }
+
+                href = href || "#";
+
                 $(row).prepend(
                   '<a class="btn btn-sm btn-danger manyfield__remove" href="' +
                     href +
-                    '"><i class="fa fa-times"></i></a>'
+                    '"><i class="fa-solid fa-times"></i></a>'
                 );
               }
             } else {
@@ -36,7 +39,7 @@
             if (canSort) {
               if (!$(row).find(".manyfield__move").length) {
                 $(row).prepend(
-                  '<span class="btn btn-sm btn-info manyfield__move"><i class="fa fa-sort"></i></span>'
+                  '<span class="btn btn-sm btn-info manyfield__move"><i class="fa-solid fa-sort"></i></span>'
                 );
               }
             } else {
