@@ -2,6 +2,7 @@
 
 [![Version](http://img.shields.io/packagist/v/fullscreeninteractive/silverstripe-manyfield.svg)](https://packagist.org/packages/fullscreeninteractive/silverstripe-manyfield)
 [![License](http://img.shields.io/packagist/l/fullscreeninteractive/silverstripe-manyfield.svg)](license.md)
+[![CI](https://github.com/fullscreeninteractive/silverstripe-manyfield/actions/workflows/ci.yml/badge.svg)](https://github.com/fullscreeninteractive/silverstripe-manyfield/actions/workflows/ci.yml)
 
 A reusable approach to a form field which allows you to create and delete rows
 in either custom built forms or in Userforms.
