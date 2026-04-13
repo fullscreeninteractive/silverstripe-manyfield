@@ -16,7 +16,7 @@ class ManyFieldCompositeField extends CompositeField
      */
     public function ID()
     {
-        return null;
+        return '';
     }
 
     /**
@@ -26,6 +26,6 @@ class ManyFieldCompositeField extends CompositeField
      */
     public function HolderID()
     {
-        return null;
+        return '';
     }
 }

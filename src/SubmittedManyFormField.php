@@ -2,10 +2,11 @@
 
 namespace FullscreenInteractive\ManyField;
 
-use SilverStripe\ORM\ArrayList;
+use SilverStripe\Model\List\ArrayList;
 use SilverStripe\ORM\DB;
+use SilverStripe\ORM\FieldType\DBField;
 use SilverStripe\UserForms\Model\Submission\SubmittedFormField;
-use SilverStripe\View\ArrayData;
+use SilverStripe\Model\ArrayData;
 
 /**
  * Custom model for saving the table data into.
@@ -89,8 +90,6 @@ class SubmittedManyFormField extends SubmittedFormField
     public function getRows()
     {
         $rows = [];
-        $i = 0;
-        $max = null;
         $columns = [];
 
         foreach ($this->Children() as $child) {
@@ -99,10 +98,6 @@ class SubmittedManyFormField extends SubmittedFormField
             }
 
             $rows[$child->Row][$child->Name] = $child;
-
-            if (!$max || $max < $child->Row) {
-                $max = $child->Row;
-            }
 
             $columns[$child->Name] = $child->Title;
         }

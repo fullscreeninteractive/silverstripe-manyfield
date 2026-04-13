@@ -5,6 +5,7 @@ namespace FullscreenInteractive\ManyField;
 use SilverStripe\Forms\CompositeField;
 use SilverStripe\View\Requirements;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Controller;
@@ -14,7 +15,7 @@ use SilverStripe\Security\SecurityToken;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Control\HTTPResponse;
 use Exception;
-use SilverStripe\ORM\SS_List;
+use SilverStripe\ORM\RelationList;
 
 class ManyField extends CompositeField
 {
@@ -70,7 +71,7 @@ class ManyField extends CompositeField
     protected $addLabel = 'Add';
 
     /**
-     * @var string
+     * @var string|bool
      */
     protected $ajaxUrl = false;
 
@@ -101,7 +102,7 @@ class ManyField extends CompositeField
 
     /**
      * @param string $name
-     * @param array $children
+     * @param array|FieldList|null $children
      */
     public function __construct($name, $children = null, $title = null)
     {
@@ -111,10 +112,10 @@ class ManyField extends CompositeField
         if ($children instanceof FieldList) {
             $this->manyChildren = $children;
         } else if (is_array($children)) {
-            $this->manyChildren = new FieldList($children);
+            $this->manyChildren = FieldList::create(...$children);
         }
 
-        $this->children = new FieldList();
+        $this->children = FieldList::create();
 
         $this->brokenOnConstruct = false;
 
@@ -176,7 +177,7 @@ class ManyField extends CompositeField
      */
     public function getMaxRecords()
     {
-        return $this->maxFields;
+        return $this->maxRecords;
     }
 
     /**
@@ -192,7 +193,7 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @return int
+     * @return bool
      */
     public function getInlineSave()
     {
@@ -312,7 +313,7 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @param boolean $bool
+     * @param string|bool $url
      *
      * @return $this
      */
@@ -344,6 +345,8 @@ class ManyField extends CompositeField
     public function setSubmittedValue($value, $data = null)
     {
         parent::setSubmittedValue($value, $data);
+
+        return $this;
     }
 
     /**
@@ -351,6 +354,10 @@ class ManyField extends CompositeField
      */
     public function saveInto(DataObjectInterface $record)
     {
+        if (!$record instanceof DataObject) {
+            return;
+        }
+
         if ($record->hasMethod('set' . $this->name)) {
             $func = 'set' . $this->name;
             $record->$func($this);
@@ -365,7 +372,7 @@ class ManyField extends CompositeField
      * Creates a new row template and returns it onto the page. As this is a new
      * record we never will have to load anything into it.
      *
-     * @return HTML;
+     * @return HTTPResponse
      */
     public function createNewRecord()
     {
@@ -375,17 +382,17 @@ class ManyField extends CompositeField
             return Controller::curr()->httpError(400);
         }
 
-        $index = $request->getVar('index');
+        $index = (int) $request->getVar('index');
 
-        $response = new HTTPResponse();
-        $response->setBody($this->generateRow($index++)->FieldHolder());
+        $response = HTTPResponse::create();
+        $response->setBody($this->generateRow($index)->FieldHolder());
 
         return $response;
     }
 
     /**
      * Saves an individual line item
-     * @return HTML;
+     * @return HTTPResponse|string
      */
     public function saveRecord()
     {
@@ -410,12 +417,16 @@ class ManyField extends CompositeField
             $class = $this->value->dataClass();
         }
 
-        if (!$class) {
+        if (!is_string($class) || $class === '') {
             throw new Exception('saveRecord() must be passed a ClassName');
         }
 
         if ($this->manyFieldDataClass && $class !== $this->manyFieldDataClass) {
             throw new Exception('Invalid ClassName passed');
+        }
+
+        if (!is_subclass_of($class, DataObject::class)) {
+            throw new Exception('ClassName must be a DataObject subclass');
         }
 
         if (!$index) {
@@ -457,12 +468,16 @@ class ManyField extends CompositeField
             $class = $this->manyFieldDataClass;
         }
 
-        if (!$index || !$class) {
+        if (!$index || !is_string($class) || $class === '') {
             throw new Exception('recordForm() must be passed an RecordID and ClassName');
         }
 
         if ($this->manyFieldDataClass && $class !== $this->manyFieldDataClass) {
             throw new Exception('Invalid ClassName passed');
+        }
+
+        if (!is_subclass_of($class, DataObject::class)) {
+            throw new Exception('ClassName must be a DataObject subclass');
         }
 
         $record = $class::get()->byId($index);
@@ -471,7 +486,7 @@ class ManyField extends CompositeField
             return Controller::curr()->httpError(404);
         }
 
-        $response = new HTTPResponse();
+        $response = HTTPResponse::create();
 
         $edit = $this->generateRow(0, $record, false);
         $edit->removeExtraClass('row manyfield__row');
@@ -502,12 +517,16 @@ class ManyField extends CompositeField
             $class = $this->manyFieldDataClass;
         }
 
-        if (!$index || !$class) {
+        if (!$index || !is_string($class) || $class === '') {
             throw new Exception('deleteRecord() must be passed an ID and ClassName');
         }
 
         if ($this->manyFieldDataClass && $class !== $this->manyFieldDataClass) {
             throw new Exception('Invalid ClassName passed');
+        }
+
+        if (!is_subclass_of($class, DataObject::class)) {
+            throw new Exception('ClassName must be a DataObject subclass');
         }
 
         $record = $class::get()->byId($index);
@@ -522,7 +541,7 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @param string
+     * @param string $class
      *
      * @return self
      */
@@ -655,7 +674,7 @@ class ManyField extends CompositeField
      * Generates a unique row of form fields for this ManyField
      *
      * @param int $index
-     * @param mixed value
+     * @param mixed $value
      * @param bool $prefixName
      *
      * @return CompositeField
@@ -716,15 +735,17 @@ class ManyField extends CompositeField
 
     public function createPhysicalRecord()
     {
-        if ($this->manyFieldDataClass) {
-            $create = Injector::inst()->create($this->manyFieldDataClass);
-        } else {
-            $create = Injector::inst()->create($this->value->dataClass());
+        $class = $this->manyFieldDataClass ?: ($this->value ? $this->value->dataClass() : null);
+
+        if (!is_string($class) || !is_subclass_of($class, DataObject::class)) {
+            throw new Exception('Unable to determine DataObject class for ManyField record creation');
         }
+
+        $create = Injector::inst()->create($class);
 
         $create->write();
 
-        if ($this->value instanceof SS_List) {
+        if ($this->value instanceof RelationList) {
             $this->value->add($create);
         }
 

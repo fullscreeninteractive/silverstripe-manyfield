@@ -18,6 +18,28 @@ data as an array.
 composer require fullscreeninteractive/silverstripe-manyfield
 ```
 
+Supports Silverstripe CMS `^6`.
+
+## Development
+
+Install development dependencies:
+
+```
+composer install
+```
+
+Run static analysis:
+
+```
+composer lint
+```
+
+Run tests:
+
+```
+composer test
+```
+
 ## Usage
 
 ![Image of Function](https://raw.githubusercontent.com/fullscreeninteractive/silverstripe-manyfield/master/client/img/demo.png)

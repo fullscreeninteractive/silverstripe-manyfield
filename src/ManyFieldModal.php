@@ -4,8 +4,8 @@ namespace FullscreenInteractive\ManyField;
 
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Model\ArrayData;
 use SilverStripe\ORM\DataObjectInterface;
-use SilverStripe\View\ArrayData;
 use SilverStripe\Security\SecurityToken;
 
 /**

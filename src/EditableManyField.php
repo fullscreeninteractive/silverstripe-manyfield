@@ -2,14 +2,14 @@
 
 namespace FullscreenInteractive\ManyField;
 
-use Dotenv\Exception\ValidationException;
 use Exception;
-use SilverStripe\Forms\GridField\GridField;
-use FullscreenInteractive\ManyField\ManyField;
+use SilverStripe\Assets\File;
 use Psr\Log\LoggerInterface;
 use SilverStripe\Assets\Upload;
+use SilverStripe\Core\Validation\ValidationException;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Forms\FieldList;
+use SilverStripe\Forms\GridField\GridField;
 use SilverStripe\Forms\GridField\GridFieldButtonRow;
 use SilverStripe\Forms\GridField\GridFieldConfig;
 use SilverStripe\Forms\GridField\GridFieldDeleteAction;
@@ -68,7 +68,7 @@ class EditableManyField extends EditableFormField
             $fields->removeByName('Children');
             $fields->removeByName('Default');
 
-            $editableColumns = new GridFieldEditableColumns();
+            $editableColumns = GridFieldEditableColumns::create();
             $fieldClasses = singleton(EditableFormField::class)->getEditableFieldClasses();
             $editableColumns->setDisplayFields([
                 'ClassName' => function ($record, $column, $grid) use ($fieldClasses) {
@@ -90,23 +90,23 @@ class EditableManyField extends EditableFormField
             $config = GridFieldConfig::create()
                 ->addComponents(
                     $editableColumns,
-                    new GridFieldButtonRow(),
-                    (new GridFieldAddClassesButton(EditableTextField::class))
+                    GridFieldButtonRow::create(),
+                    (new GridFieldAddClassesButton([EditableTextField::class]))
                         ->setButtonName(_t(__CLASS__ . '.ADD_FIELD', 'Add Field'))
                         ->setButtonClass('btn-primary'),
-                    (new GridFieldAddClassesButton(EditableFormStep::class))
+                    (new GridFieldAddClassesButton([EditableFormStep::class]))
                         ->setButtonName(_t(__CLASS__ . '.ADD_PAGE_BREAK', 'Add Page Break'))
                         ->setButtonClass('btn-secondary'),
                     (new GridFieldAddClassesButton([EditableFieldGroup::class, EditableFieldGroupEnd::class]))
                         ->setButtonName(_t(__CLASS__ . '.ADD_FIELD_GROUP', 'Add Field Group'))
                         ->setButtonClass('btn-secondary'),
-                    $editButton = new GridFieldEditButton(),
-                    new GridFieldDeleteAction(),
-                    new GridFieldToolbarHeader(),
-                    new GridFieldOrderableRows('Sort'),
-                    new GridFieldDetailForm(),
+                    GridFieldEditButton::create(),
+                    GridFieldDeleteAction::create(),
+                    GridFieldToolbarHeader::create(),
+                    GridFieldOrderableRows::create('Sort'),
+                    GridFieldDetailForm::create(),
                     // Betterbuttons prev and next is enabled by adding a GridFieldPaginator component
-                    new GridFieldPaginator(999)
+                    GridFieldPaginator::create(999)
                 );
 
             if ($this->isInDB()) {
@@ -176,14 +176,14 @@ class EditableManyField extends EditableFormField
         foreach ($this->Children() as $field) {
             if (isset($incoming[$field->Name])) {
                 foreach ($incoming[$field->Name] as $i => $value) {
-                    if ($value && !empty($value)) {
+                    if ($value !== null && $value !== '') {
                         $rowHasValue[$i] = true;
                     }
                 }
             } elseif (isset($incoming['name']) && isset($incoming['name'][$field->Name])) {
                 // handle multi-part
                 foreach ($incoming['name'][$field->Name] as $i => $value) {
-                    if ($value && !empty($value)) {
+                    if ($value !== null && $value !== '') {
                         $rowHasValue[$i] = true;
                     }
                 }
@@ -262,23 +262,26 @@ class EditableManyField extends EditableFormField
         }
 
         if ($file) {
-            $foldername = $field->getFormField()->getFolderName();
+            $foldername = null;
+            $fieldFormField = $field->getFormField();
+            if (method_exists($fieldFormField, 'getFolderName')) {
+                $foldername = (string) $fieldFormField->getFolderName();
+            }
             $upload = Upload::create();
 
             try {
                 $result = $upload->loadIntoFile($file, null, $foldername);
 
-                /** @var AssetContainer|File $fileObj */
                 $fileObj = $upload->getFile();
 
-                if ($result && $fileObj) {
-                    $fileObj->ShowInSearch = 0;
-                    $fileObj->UserFormUpload = UserFormFileExtension::USER_FORM_UPLOAD_TRUE;
+                if ($result && $fileObj instanceof File) {
+                    $fileObj->setField('ShowInSearch', 0);
+                    $fileObj->setField('UserFormUpload', UserFormFileExtension::USER_FORM_UPLOAD_TRUE);
                     $fileObj->write();
 
                     $submittedField->UploadedFileID = $fileObj->ID;
                 } else {
-                    throw new Exception('Could not upload files: %s', implode($upload->getErrors()));
+                    throw new Exception(sprintf('Could not upload files: %s', implode(', ', $upload->getErrors())));
                 }
             } catch (ValidationException $e) {
                 Injector::inst()->get(LoggerInterface::class)->error($e);
