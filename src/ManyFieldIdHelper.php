@@ -8,6 +8,7 @@ use SilverStripe\Forms\FormField;
 
 class ManyFieldIdHelper extends FormTemplateHelper
 {
+    /** @var array<string, int> */
     protected $names = [];
 
      /**
@@ -18,7 +19,10 @@ class ManyFieldIdHelper extends FormTemplateHelper
     /**
      * @param FormField $field
      */
-    public function generateFieldID($field)
+    /**
+     * @param FormField $field
+     */
+    public function generateFieldID($field): string
     {
         $name = sprintf(
             '%s_%s',

@@ -13,22 +13,27 @@ use SilverStripe\Model\ArrayData;
  */
 class SubmittedManyFormField extends SubmittedFormField
 {
+    /** @var string */
     private static $table_name = 'SubmittedManyFormField';
 
+    /** @var array<string, string> */
     private static $db = [
         'Processed' => 'Boolean'
     ];
 
+    /** @var array<string, class-string> */
     private static $many_many = [
         'Children' => SubmittedFormField::class
     ];
 
+    /** @var array<string, array<string, string>> */
     private static $many_many_extraFields = [
         'Children' => [
             'Row' => 'Int'
         ]
     ];
 
+    /** @var array<int, string> */
     private static $cascade_deletes = [
         'Children'
     ];
@@ -43,7 +48,7 @@ class SubmittedManyFormField extends SubmittedFormField
     }
 
 
-    public function onAfterWrite()
+    public function onAfterWrite(): void
     {
         parent::onAfterWrite();
 
@@ -87,7 +92,10 @@ class SubmittedManyFormField extends SubmittedFormField
      * submission, it first sorts by the latest row (the newest configuration)
      *
      */
-    public function getRows()
+    /**
+     * @return ArrayList<ArrayData>
+     */
+    public function getRows(): ArrayList
     {
         $rows = [];
         $columns = [];

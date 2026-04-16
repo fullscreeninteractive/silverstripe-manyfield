@@ -16,14 +16,14 @@ use SilverStripe\Security\SecurityToken;
 
  class ManyFieldModal extends ManyField
  {
-    protected $summaryTemplate = '';
+    protected string $summaryTemplate = '';
 
     /**
      * @var string
      */
     protected $template = 'ManyFieldModal';
 
-    public function setSummaryTemplate($template)
+    public function setSummaryTemplate(string $template): self
     {
         $this->summaryTemplate = $template;
 
@@ -36,7 +36,6 @@ use SilverStripe\Security\SecurityToken;
      */
     public function FieldList() {
         $output = FieldList::create();
-        $index = 0;
 
         if ($this->value) {
             foreach ($this->value as $record) {
@@ -57,7 +56,7 @@ use SilverStripe\Security\SecurityToken;
         return $output;
     }
 
-    public function updateRelation(DataObjectInterface $record, $delete = true)
+    public function updateRelation(DataObjectInterface $record, bool $delete = true): self
     {
         // no-op. As managed inline.
         return $this;

@@ -4,6 +4,12 @@
     colors="true"
     beStrictAboutChangesToGlobalState="false"
 >
+    <source>
+        <include>
+            <directory>src</directory>
+        </include>
+    </source>
+
     <testsuites>
         <testsuite name="ManyField">
             <directory>tests/php</directory>

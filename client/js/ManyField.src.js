@@ -5,6 +5,12 @@
         var canSort = $(elem).hasClass("manyfield__holder--cansort");
         var canRemove = $(elem).hasClass("manyfield__holder--canremove");
         var field = $(elem).find(".manyfield__row");
+        var removeIcon =
+          $(elem).find(".manyfield__icon-template--remove").html() ||
+          '<span aria-hidden="true">&times;</span>';
+        var moveIcon =
+          $(elem).find(".manyfield__icon-template--move").html() ||
+          '<span aria-hidden="true">&#8645;</span>';
 
         $(elem)
           .find(".manyfield__row")
@@ -27,9 +33,11 @@
                 href = href || "#";
 
                 $(row).prepend(
-                  '<a class="btn btn-sm btn-danger manyfield__remove" href="' +
-                    href +
-                    '"><i class="fa-solid fa-times"></i></a>'
+                  $("<a/>", {
+                    class: "btn btn-sm btn-danger manyfield__remove",
+                    href: href,
+                    html: removeIcon,
+                  })
                 );
               }
             } else {
@@ -39,7 +47,10 @@
             if (canSort) {
               if (!$(row).find(".manyfield__move").length) {
                 $(row).prepend(
-                  '<span class="btn btn-sm btn-info manyfield__move"><i class="fa-solid fa-sort"></i></span>'
+                  $("<span/>", {
+                    class: "btn btn-sm btn-info manyfield__move",
+                    html: moveIcon,
+                  })
                 );
               }
             } else {

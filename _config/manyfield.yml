@@ -1,0 +1,8 @@
+---
+Name: manyfield
+---
+SilverStripe\Admin\LeftAndMain:
+  extra_requirements_css:
+    - 'fullscreeninteractive/silverstripe-manyfield:client/css/ManyField.css'
+  extra_requirements_javascript:
+    - 'fullscreeninteractive/silverstripe-manyfield:client/js/ManyField.src.js'

@@ -26,6 +26,7 @@ use SilverStripe\UserForms\Model\EditableFormField\EditableFieldGroupEnd;
 use SilverStripe\UserForms\Model\EditableFormField\EditableFileField;
 use SilverStripe\UserForms\Model\EditableFormField\EditableFormStep;
 use SilverStripe\UserForms\Model\EditableFormField\EditableTextField;
+use SilverStripe\UserForms\Model\Submission\SubmittedFormField;
 use Symbiote\GridFieldExtensions\GridFieldEditableColumns;
 use Symbiote\GridFieldExtensions\GridFieldOrderableRows;
 
@@ -35,26 +36,34 @@ if (!class_exists(EditableFormField::class)) {
 
 class EditableManyField extends EditableFormField
 {
+    /** @var string */
     private static $singular_name = 'Repeater Field';
 
+    /** @var string */
     private static $plural_name = 'Repeater Fields';
 
+    /** @var array<string, mixed> */
     private static $db = [];
 
+    /** @var string */
     private static $table_name = 'EditableManyField';
 
+    /** @var array<string, class-string> */
     private static $many_many = [
         'Children' => EditableFormField::class
     ];
 
+    /** @var array<int, string> */
     private static $owns = [
         'Children'
     ];
 
+    /** @var array<int, string> */
     private static $cascade_deletes = [
         'Children'
     ];
 
+    /** @var array<int, string> */
     private static $cascade_duplicates = [
         'Children'
     ];
@@ -162,12 +171,15 @@ class EditableManyField extends EditableFormField
      * When saving this data from the front end, extract the array and
      * create the children records
      */
-    public function getValueFromData($data)
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function getValueFromData(array $data): string
     {
         $incoming = isset($data[$this->Name]) ? $data[$this->Name] : false;
 
         if (!$incoming) {
-            return json_encode([]);
+            return '[]';
         }
 
         // unset any rows which don't have any values at all
@@ -227,11 +239,15 @@ class EditableManyField extends EditableFormField
             }
         }
 
-        return json_encode($rows);
+        $json = json_encode($rows);
+        return is_string($json) ? $json : '[]';
     }
 
 
-    public function createNestedSubmittedFormField(EditableFormField $field, $data)
+    /**
+     * @param array<string, mixed> $data
+     */
+    public function createNestedSubmittedFormField(EditableFormField $field, array $data): SubmittedFormField
     {
         $submittedField = $field->getSubmittedFormField();
         $submittedField->Name = $field->Name;
@@ -262,7 +278,7 @@ class EditableManyField extends EditableFormField
         }
 
         if ($file) {
-            $foldername = null;
+            $foldername = false;
             $fieldFormField = $field->getFormField();
             if (method_exists($fieldFormField, 'getFolderName')) {
                 $foldername = (string) $fieldFormField->getFolderName();

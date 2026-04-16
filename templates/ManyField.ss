@@ -15,6 +15,11 @@
 <% end_loop %>
 </div>
 
+<div class="manyfield__icon-templates" aria-hidden="true">
+    <span class="manyfield__icon-template manyfield__icon-template--remove"><% include FullscreenInteractive/ManyField/Includes/ManyFieldIconRemove %></span>
+    <span class="manyfield__icon-template manyfield__icon-template--move"><% include FullscreenInteractive/ManyField/Includes/ManyFieldIconMove %></span>
+</div>
+
 <% if canAdd %>
 <div class="manyfield__add">
     <a class="btn btn-primary" href="$AddLink">$AddLabel +</a>

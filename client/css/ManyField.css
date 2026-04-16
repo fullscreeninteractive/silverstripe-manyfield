@@ -5,3 +5,38 @@
 .manyfield__outer.loading {
 	display: none;
 }
+
+.manyfield__icon-templates {
+    display: none;
+}
+
+.manyfield__row {
+    position: relative;
+}
+
+.manyfield__remove {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+.manyfield__move {
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.manyfield__remove,
+.manyfield__move {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.manyfield__icon-svg {
+    width: 12px;
+    height: 12px;
+    display: block;
+    fill: currentColor;
+}

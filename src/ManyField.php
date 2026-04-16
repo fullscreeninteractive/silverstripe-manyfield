@@ -15,9 +15,11 @@ use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Control\HTTPResponse;
 use Exception;
 use SilverStripe\ORM\RelationList;
+use SilverStripe\Model\ModelData;
 
 class ManyField extends CompositeField
 {
+    /** @var array<int, string> */
     private static $allowed_actions = [
         'createNewRecord',
         'recordForm',
@@ -48,11 +50,16 @@ class ManyField extends CompositeField
 
     protected bool $callWriteOnNewRow = false;
 
+    /** @var array<string, array<int, callable>> */
     protected array $fieldCallbacks = [];
 
-    protected FieldList|null $manyChildren = null;
+    protected FieldList $manyChildren;
 
-
+    /**
+     * @param string $name
+     * @param FieldList|array<int, FormField>|null $children
+     * @param string|null $title
+     */
     public function __construct(string $name, FieldList|array|null $children = null, string|null $title = null)
     {
         Requirements::javascript('fullscreeninteractive/silverstripe-manyfield:client/js/ManyField.src.js');
@@ -62,6 +69,8 @@ class ManyField extends CompositeField
             $this->manyChildren = $children;
         } else if (is_array($children)) {
             $this->manyChildren = FieldList::create(...$children);
+        } else {
+            $this->manyChildren = FieldList::create();
         }
 
         $this->children = FieldList::create();
@@ -223,7 +232,7 @@ class ManyField extends CompositeField
      */
     public function getAddLabel(): string
     {
-        return ($this->addLabel ?? 'Add');
+        return $this->addLabel;
     }
 
     /**
@@ -275,7 +284,7 @@ class ManyField extends CompositeField
     /**
      * @param DataObjectInterface $record
      */
-    public function saveInto(DataObjectInterface $record)
+    public function saveInto(DataObjectInterface $record): void
     {
         if (!$record instanceof DataObject) {
             return;
@@ -297,12 +306,13 @@ class ManyField extends CompositeField
      *
      * @return HTTPResponse
      */
-    public function createNewRecord()
+    public function createNewRecord(): HTTPResponse
     {
-        $request = Controller::curr()->getRequest();
+        $controller = $this->currentController();
+        $request = $controller->getRequest();
 
         if (!SecurityToken::inst()->checkRequest($request)) {
-            return Controller::curr()->httpError(400);
+            return $controller->httpError(400);
         }
 
         $index = (int) $request->getVar('index');
@@ -317,20 +327,21 @@ class ManyField extends CompositeField
      * Saves an individual line item
      * @return HTTPResponse|string
      */
-    public function saveRecord()
+    public function saveRecord(): HTTPResponse|string
     {
-        $request = Controller::curr()->getRequest();
+        $controller = $this->currentController();
+        $request = $controller->getRequest();
 
         if (!SecurityToken::inst()->checkRequest($request)) {
-            return Controller::curr()->httpError(400);
+            return $controller->httpError(400);
         }
 
         if ($this->readonly) {
-            return Controller::curr()->httpError(401);
+            return $controller->httpError(401);
         }
 
-        $index = Controller::curr()->getRequest()->requestVar('ID');
-        $class = Controller::curr()->getRequest()->requestVar('ClassName');
+        $index = $request->requestVar('ID');
+        $class = $request->requestVar('ClassName');
 
         if (!$class) {
             $class = $this->manyFieldDataClass;
@@ -359,7 +370,7 @@ class ManyField extends CompositeField
         }
 
         if (!$record || !$record->canEdit()) {
-            return Controller::curr()->httpError(400);
+            return $controller->httpError(400);
         }
 
         // update the record
@@ -376,16 +387,17 @@ class ManyField extends CompositeField
     /**
      * Displays a Form for a particular record.
      */
-    public function recordForm()
+    public function recordForm(): HTTPResponse
     {
-        $request = Controller::curr()->getRequest();
+        $controller = $this->currentController();
+        $request = $controller->getRequest();
 
         if (!SecurityToken::inst()->checkRequest($request)) {
-            return Controller::curr()->httpError(400, 'Missing security token');
+            return $controller->httpError(400, 'Missing security token');
         }
 
-        $index = Controller::curr()->getRequest()->getVar('RecordID');
-        $class = Controller::curr()->getRequest()->getVar('ClassName');
+        $index = $request->getVar('RecordID');
+        $class = $request->getVar('ClassName');
 
         if (!$class) {
             $class = $this->manyFieldDataClass;
@@ -406,7 +418,7 @@ class ManyField extends CompositeField
         $record = $class::get()->byId($index);
 
         if (!$record || !$record->canView()) {
-            return Controller::curr()->httpError(404);
+            return $controller->httpError(404);
         }
 
         $response = HTTPResponse::create();
@@ -421,20 +433,21 @@ class ManyField extends CompositeField
     /**
      * Deletes a record
      */
-    public function deleteRecord()
+    public function deleteRecord(): HTTPResponse|string
     {
-        $request = Controller::curr()->getRequest();
+        $controller = $this->currentController();
+        $request = $controller->getRequest();
 
         if (!SecurityToken::inst()->checkRequest($request)) {
-            return Controller::curr()->httpError(400, 'Bad security token');
+            return $controller->httpError(400, 'Bad security token');
         }
 
         if ($this->readonly) {
-            return Controller::curr()->httpError(401);
+            return $controller->httpError(401);
         }
 
-        $index = Controller::curr()->getRequest()->getVar('ID');
-        $class = Controller::curr()->getRequest()->getVar('ClassName');
+        $index = $request->getVar('ID');
+        $class = $request->getVar('ClassName');
 
         if (!$class) {
             $class = $this->manyFieldDataClass;
@@ -455,7 +468,7 @@ class ManyField extends CompositeField
         $record = $class::get()->byId($index);
 
         if (!$record || !$record->canDelete()) {
-            return Controller::curr()->httpError(404, 'No record found with that ID');
+            return $controller->httpError(404, 'No record found with that ID');
         }
 
         $record->delete();
@@ -513,6 +526,10 @@ class ManyField extends CompositeField
     /**
      * Override set value.
      */
+    /**
+     * @param mixed $value
+     * @param array<string, mixed>|ModelData|null $data
+     */
     public function setValue($value, $data = null)
     {
         if (!$value && $data) {
@@ -520,7 +537,7 @@ class ManyField extends CompositeField
                 if (isset($data[$this->name])) {
                     $value = $data[$this->name];
                 }
-            } else if ($data->hasMethod($this->name)) {
+            } else if ($data instanceof DataObject && $data->hasMethod($this->name)) {
                 $value = $data->{$this->name}();
             }
         }
@@ -552,7 +569,10 @@ class ManyField extends CompositeField
         return $output;
     }
 
-    protected function updateManyNestedField($field, $index, $value, $prefixName)
+    /**
+     * @param mixed $value
+     */
+    protected function updateManyNestedField(FormField $field, int $index, $value, bool $prefixName): FormField
     {
         $name = $field->name;
 
@@ -565,10 +585,10 @@ class ManyField extends CompositeField
                 }
             }
         } else {
-            if ($value && is_object($value) && $value->hasMethod($name)) {
+            if ($value instanceof DataObject && $value->hasMethod($name)) {
                 $field->setValue($value->{$name}(), $value);
             } else if (is_object($value)) {
-                $field->setValue($value->{$name}, $value);
+                $field->setValue($value->{$name});
             } else if (is_array($value)) {
                 $field->setValue((isset($value[$name])) ? $value[$name] : null);
             } else {
@@ -617,12 +637,12 @@ class ManyField extends CompositeField
             $field = $field->setDisabled($this->readonly);
 
             if ($value) {
-                if (is_object($value) && $value->hasMethod('modifyManyRecordField')) {
+                if ($value instanceof DataObject && $value->hasMethod('modifyManyRecordField')) {
                     $field = $value->modifyManyRecordField($field);
                 } else {
                     $value = $this->value;
 
-                    if (is_object($value)) {
+                    if ($value instanceof DataObject) {
                         $field = $field->setValue($value->{$field->name}, $value);
                     } else if (is_array($value)) {
                         if (isset($value[$originalName])) {
@@ -653,7 +673,7 @@ class ManyField extends CompositeField
     }
 
 
-    public function createPhysicalRecord()
+    public function createPhysicalRecord(): DataObject
     {
         $class = $this->manyFieldDataClass ?: ($this->value ? $this->value->dataClass() : null);
 
@@ -672,9 +692,10 @@ class ManyField extends CompositeField
     }
 
 
-    public function AbsoluteLink($action = null)
+    public function AbsoluteLink($action = null): ?string
     {
-        return Director::absoluteURL($this->Link($action));
+        $url = Director::absoluteURL($this->Link($action));
+        return is_string($url) ? $url : null;
     }
 
     /**
@@ -683,7 +704,7 @@ class ManyField extends CompositeField
      * but it'll handle most cases as long as the Field name matches the
      * relation name.
      */
-    public function updateRelation(DataObjectInterface $record, $delete = true)
+    public function updateRelation(DataObjectInterface $record, bool $delete = true): self
     {
         if ($this->inlineSave) {
             return $this;
@@ -720,6 +741,8 @@ class ManyField extends CompositeField
                 }
             }
         }
+
+        $idKeyMap = [];
 
         if (isset($this->value['ID'])) {
             foreach ($this->value['ID'] as $key => $id) {
@@ -788,5 +811,15 @@ class ManyField extends CompositeField
         }
 
         return $this;
+    }
+
+    protected function currentController(): Controller
+    {
+        $controller = Controller::curr();
+        if (!$controller) {
+            throw new Exception('No current controller is available');
+        }
+
+        return $controller;
     }
 }
