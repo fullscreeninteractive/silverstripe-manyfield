@@ -10,7 +10,6 @@ use SilverStripe\ORM\DataObjectInterface;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Controller;
 use SilverStripe\Forms\FormField;
-use SilverStripe\Forms\HiddenField;
 use SilverStripe\Security\SecurityToken;
 use SilverStripe\Core\Injector\Injector;
 use SilverStripe\Control\HTTPResponse;
@@ -27,84 +26,34 @@ class ManyField extends CompositeField
         'updatedRecords'
     ];
 
-    /**
-     * @var int
-     */
-    protected $minRecords = 0;
+    protected int $minRecords = 0;
 
-    /**
-     * @var int
-     */
-    protected $maxRecords = null;
+    protected int|null $maxRecords = null;
 
-    /**
-     * @var boolean
-     */
-    protected $canAdd = true;
+    protected bool $canAdd = true;
 
-    /**
-     * Can records be removed from the list - useful for displaying just an
-     * inline edit form.
-     *
-     * @var boolean
-     */
-    protected $canRemove = true;
+    protected bool $canRemove = true;
 
-    /**
-     * @var boolean
-     */
-    protected $canSort = true;
+    protected bool $canSort = true;
 
-    /**
-     * @var boolean
-     */
-    protected $inlineSave = false;
+    protected bool $inlineSave = false;
 
-    /**
-     * @var string
-     */
     protected $template = 'ManyField';
 
-    /**
-     * @var string
-     */
-    protected $addLabel = 'Add';
+    protected string $addLabel = 'Add';
 
-    /**
-     * @var string|bool
-     */
-    protected $ajaxUrl = false;
+    protected bool|string $ajaxUrl = false;
 
-    /**
-     * @var string
-     */
-    protected $manyFieldDataClass;
+    protected string|null $manyFieldDataClass = null;
 
-    /**
-     * Does creating a new row automatically call write to the database?
-     *
-     * If you use things such as UploadField which requires an ID then it is
-     * best to set this to true
-     *
-     * @var boolean
-     */
-    protected $callWriteOnNewRow = false;
+    protected bool $callWriteOnNewRow = false;
 
-    /**
-     * @var array
-     */
-    protected $fieldCallbacks = [];
+    protected array $fieldCallbacks = [];
 
-    /**
-     *
-     */
-    protected $manyChildren = [];
+    protected FieldList|null $manyChildren = null;
 
-    /**
-     * @param string $name
-     * @param array|FieldList|null $children
-     */
-    public function __construct($name, $children = null, $title = null)
+
+    public function __construct(string $name, FieldList|array|null $children = null, string|null $title = null)
     {
         Requirements::javascript('fullscreeninteractive/silverstripe-manyfield:client/js/ManyField.src.js');
         Requirements::css('fullscreeninteractive/silverstripe-manyfield:client/css/ManyField.css');
@@ -116,7 +65,6 @@ class ManyField extends CompositeField
         }
 
         $this->children = FieldList::create();
-
         $this->brokenOnConstruct = false;
 
         FormField::__construct($name, $title);
@@ -125,11 +73,8 @@ class ManyField extends CompositeField
     /**
      * A callback to customise a given form field instance. Must take 4
      * arguments `$field, $index, $manyField, $value`.
-     *
-     * @param string $field
-     * @param callable $callback
      */
-    public function addFieldCallback($field, $callback)
+    public function addFieldCallback(string $field, callable $callback): self
     {
         if (!isset($this->fieldCallbacks[$field])) {
             $this->fieldCallbacks[$field] = [];
@@ -140,52 +85,51 @@ class ManyField extends CompositeField
         return $this;
     }
 
+
     /**
-     * @param int $minRecords
-     *
-     * @return $this
+     * Set the minimum number of records required (e.g. 1).
      */
-    public function setMinRecords($minRecords)
+    public function setMinRecords(int $minRecords): self
     {
         $this->minRecords = $minRecords;
 
         return $this;
     }
 
+
     /**
-     * @return int
+     * Get the minimum number of records required (e.g. 1).
      */
-    public function getMinRecords()
+    public function getMinRecords(): int
     {
         return $this->minRecords;
     }
 
+
     /**
-     * @param int $maxRecords
-     *
-     * @return $this
+     * Set the maximum number of records allowed (e.g. 10).
      */
-    public function setMaxRecords($maxRecords)
+    public function setMaxRecords(int $maxRecords): self
     {
         $this->maxRecords = $maxRecords;
 
         return $this;
     }
 
+
     /**
-     * @return int
+     * Get the maximum number of records allowed (e.g. 10).
      */
-    public function getMaxRecords()
+    public function getMaxRecords(): int|null
     {
         return $this->maxRecords;
     }
 
+
     /**
-     * @param boolean $inlineSave
-     *
-     * @return $this
+     * If true, the records will be saved inline when the user blurs a field.
      */
-    public function setInlineSave($inlineSave)
+    public function setInlineSave(bool $inlineSave): self
     {
         $this->inlineSave = $inlineSave;
 
@@ -193,19 +137,17 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @return bool
+     * Get the inline save flag.
      */
-    public function getInlineSave()
+    public function getInlineSave(): bool
     {
         return $this->inlineSave;
     }
 
     /**
-     * @param boolean $bool
-     *
-     * @return $this
+     * Set the can sort flag.
      */
-    public function setCanSort($bool)
+    public function setCanSort(bool $bool): self
     {
         $this->canSort = $bool;
 
@@ -213,11 +155,17 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @param boolean $bool
-     *
-     * @return $this
+     * Get the can sort flag.
      */
-    public function setCanRemove($bool)
+    public function getCanSort(): bool
+    {
+        return $this->canSort;
+    }
+
+    /**
+     * Set the can remove flag.
+     */
+    public function setCanRemove(bool $bool): self
     {
         $this->canRemove = $bool;
 
@@ -225,11 +173,9 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @param boolean $bool
-     *
-     * @return $this
+     * Set the can add flag.
      */
-    public function setCanAdd($bool)
+    public function setCanAdd(bool $bool): self
     {
         $this->canAdd = $bool;
 
@@ -237,9 +183,9 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @return boolean
+     * Get the can add flag.
      */
-    public function canAdd()
+    public function canAdd(): bool
     {
         if ($this->readonly) {
             return false;
@@ -249,9 +195,9 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @return boolean
+     * Get the can remove flag.
      */
-    public function canRemove()
+    public function canRemove(): bool
     {
         if ($this->readonly) {
             return false;
@@ -261,9 +207,9 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @return boolean
+     * Get the can sort flag.
      */
-    public function canSort()
+    public function canSort(): bool
     {
         if ($this->readonly) {
             return false;
@@ -273,19 +219,17 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @return string
+     * Get the add label.
      */
-    public function getAddLabel()
+    public function getAddLabel(): string
     {
-        return $this->addLabel;
+        return ($this->addLabel ?? 'Add');
     }
 
     /**
-     * @param string $label
-     *
-     * @return $this
+     * Set the add label.
      */
-    public function setAddLabel($label)
+    public function setAddLabel(string $label): self
     {
         $this->addLabel = $label;
 
@@ -293,19 +237,17 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @return boolean
+     * Check if the field has data.
      */
-    public function hasData()
+    public function hasData(): bool
     {
         return true;
     }
 
     /**
-     * @param boolean $bool
-     *
-     * @return $this
+     * Set the call write on new row flag.
      */
-    public function setCallWriteOnNewRow($bool)
+    public function setCallWriteOnNewRow(bool $bool): self
     {
         $this->callWriteOnNewRow = $bool;
 
@@ -313,11 +255,9 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @param string|bool $url
-     *
-     * @return $this
+     * Set the load from ajax flag.
      */
-    public function setLoadFromAjax($url)
+    public function setLoadFromAjax(string|bool $url): self
     {
         $this->ajaxUrl = $url;
 
@@ -325,28 +265,11 @@ class ManyField extends CompositeField
     }
 
     /**
-     * @return string
+     * Get the load from ajax flag.
      */
-    public function getLoadFromAjax()
+    public function getLoadFromAjax(): string|bool
     {
         return $this->ajaxUrl;
-    }
-
-    /**
-     * Set the field value.
-     *
-     * If a FormField requires specific behaviour for loading content from either the database
-     * or a submitted form value they should override setSubmittedValue() instead.
-     *
-     * @param mixed $value Either the parent object, or array of source data being loaded
-     * @param array|DataObject $data {@see Form::loadDataFrom}
-     * @return $this
-     */
-    public function setSubmittedValue($value, $data = null)
-    {
-        parent::setSubmittedValue($value, $data);
-
-        return $this;
     }
 
     /**
@@ -553,11 +476,9 @@ class ManyField extends CompositeField
     }
 
     /**
-     * Add URL
-     *
-     * @return string
+     * Add link URL.
      */
-    public function AddLink()
+    public function AddLink(): string
     {
         return Controller::join_links(
             $this->AbsoluteLink('createNewRecord'),
@@ -567,10 +488,8 @@ class ManyField extends CompositeField
 
     /**
      * Edit Record Form URL
-     *
-     * @return string
      */
-    public function EditLink()
+    public function EditLink(): string
     {
         return Controller::join_links(
             $this->AbsoluteLink('recordForm'),
@@ -583,7 +502,7 @@ class ManyField extends CompositeField
      *
      * @return string
      */
-    public function SaveLink()
+    public function SaveLink(): string
     {
         return Controller::join_links(
             $this->AbsoluteLink('saveRecord'),
@@ -721,7 +640,7 @@ class ManyField extends CompositeField
         }
 
 
-        if ($this->inlineSave) {
+        if ($this->getInlineSave()) {
             $row
                 ->addExtraClass('inline-save')
                 ->setAttribute('data-inline-save', $this->Link('saveRecord'))
@@ -733,6 +652,7 @@ class ManyField extends CompositeField
         return $row;
     }
 
+
     public function createPhysicalRecord()
     {
         $class = $this->manyFieldDataClass ?: ($this->value ? $this->value->dataClass() : null);
@@ -742,7 +662,6 @@ class ManyField extends CompositeField
         }
 
         $create = Injector::inst()->create($class);
-
         $create->write();
 
         if ($this->value instanceof RelationList) {
@@ -751,6 +670,7 @@ class ManyField extends CompositeField
 
         return $create;
     }
+
 
     public function AbsoluteLink($action = null)
     {
