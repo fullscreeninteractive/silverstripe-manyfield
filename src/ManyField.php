@@ -40,6 +40,8 @@ class ManyField extends CompositeField
 
     protected bool $inlineSave = false;
 
+    protected bool $inlineDelete = false;
+
     protected $template = 'ManyField';
 
     protected string $addLabel = 'Add';
@@ -151,6 +153,25 @@ class ManyField extends CompositeField
     public function getInlineSave(): bool
     {
         return $this->inlineSave;
+    }
+
+
+    /**
+     * Set the inline delete flag.
+     */
+    public function setInlineDelete(bool $inlineDelete): self
+    {
+        $this->inlineDelete = $inlineDelete;
+
+        return $this;
+    }
+
+    /**
+     * Get the inline delete flag.
+     */
+    public function getInlineDelete(): bool
+    {
+        return $this->inlineDelete;
     }
 
     /**
