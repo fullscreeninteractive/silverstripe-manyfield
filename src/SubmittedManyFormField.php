@@ -8,6 +8,10 @@ use SilverStripe\ORM\FieldType\DBField;
 use SilverStripe\UserForms\Model\Submission\SubmittedFormField;
 use SilverStripe\Model\ArrayData;
 
+if (!class_exists('SilverStripe\UserForms\Model\Submission\SubmittedFormField')) {
+    return;
+}
+
 /**
  * Custom model for saving the table data into.
  */
