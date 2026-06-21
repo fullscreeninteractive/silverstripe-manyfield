@@ -747,10 +747,6 @@ class ManyField extends CompositeField
         }
 
         foreach ($existing as $row) {
-            if (!isset($this->value['ID'])) {
-                throw new Exception('Missing ID field in ManyMany field list.');
-            }
-
             if ($this->canRemove) {
                 if (!isset($this->value['ID'][$row->ID])) {
                     // missing so delete or remove.
